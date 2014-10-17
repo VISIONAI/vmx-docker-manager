@@ -1,0 +1,118 @@
+#!/bin/bash
+
+
+# CONFIG
+#########
+# CHECK_ROOT - since docker requires root access, we avoid errors by only allowing root, some configurations allow non-root users root priviledges
+
+CHECK_ROOT=true
+
+##PARAMS
+
+cmd=$1
+config=$2
+
+
+init () {
+  docker run -d --name vmx-mcr gdoteof/vmx-mcr
+  docker run -d --name vmx-userdata gdoteof/vmx-userdata
+  docker run -d --name vmx-base gdoteof/vmx-base
+  touch .vmx-init
+}
+
+
+usage () {
+  echo "Usage: vmx COMMAND [OPTIONS]"
+  echo "Commands:"
+  echo "    start PORT:  Start vmx on localhost:PORT"
+  echo "    stop:   Stop vmx"
+  echo "    enter:  Shell access to docker"
+  echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time y ou start vmx)"
+  echo "Example:"
+  echo " - Run vmx on port 3000"
+  echo "    $  ./vmx start 3000"
+  exit 1
+}
+
+
+start_vmx () {
+  RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
+  if [ "$RUNNING" -ne "1" ]; then
+    echo "Starting vmx with port $HOSTPORT"
+    docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $HOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
+  else
+    echo "Already running vmx-environment"
+    exit 1
+  fi
+}
+
+stop_vmx () {
+  docker stop vmx-environment
+  docker rm   vmx-environment
+}
+
+enter_vmx () {
+  RUNNING_INSPECT=$(docker ps -a| grep 'vmx-inspect-environment' | wc -l)
+  if [ "$RUNNING_INSPECT" -ne "1" ]; then
+    docker run -i -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr  --name vmx-inspect-environment --rm gdoteof/vmx-environment /bin/bash
+  else
+    echo "Stopping previous inspection container.."
+    docker stop vmx-inspect-environment
+    echo "Removing previous inspection container.."
+    docker rm vmx-inspect-environment
+    enter_vmx
+  fi
+    
+}
+
+[ $# -lt 1 ] && {
+  usage
+}
+
+if [ $EUID != 0 ]; then
+  echo "You need root to run docker, try \`sudo ./vmx start 3000\`"
+  exit 1
+fi
+
+case "$cmd" in
+  start)
+    if [ $# -lt 2 ]; then
+      echo "Must supply port"
+      usage
+    fi    
+    if [ ! -e ".vmx-init" ]; then
+      echo "Downloading dependencies (this may take a while)"
+      init
+    fi
+    HOSTPORT=$2
+    start_vmx
+    echo "Successfully started vmx"
+    exit 0
+    ;;
+
+  stop)
+    stop_vmx
+    echo "Stopped vmx"
+    exit 0
+    ;;
+
+  enter)
+    enter_vmx
+    exit 0
+    ;;
+
+  init)
+    init
+    echo "Successfully boostrapped!"
+    exit 0
+    ;;
+
+  *)
+    usage
+esac
+
+do_not () {
+docker stop vmx-environment
+docker rm vmx-environment
+
+}
