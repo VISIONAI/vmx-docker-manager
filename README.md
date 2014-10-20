@@ -3,6 +3,12 @@
 
 ##Instructions
 
+Either clone the repo
+
+    git clone git@github.com:VISIONAI/vmx-docker-manager.git
+
+Or download the shell script directly: https://raw.githubusercontent.com/VISIONAI/vmx-docker-manager/master/vmx
+
     ./vmx
     Usage: vmx COMMAND [OPTIONS]
     Commands:
