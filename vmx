@@ -28,6 +28,7 @@ usage () {
   echo "    stop:   Stop vmx"
   echo "    enter:  Shell access to docker"
   echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time y ou start vmx)"
+  echo "    update: update your vmx"
   echo "Example:"
   echo " - Run vmx on port 3000"
   echo "    $  ./vmx start 3000"
@@ -38,8 +39,8 @@ usage () {
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
-    echo "Starting vmx with port $HOSTPORT"
-    docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $HOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
+    echo "Starting vmx with port $VMXHOSTPORT"
+    docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $VMXHOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
   else
     echo "Already running vmx-environment"
     exit 1
@@ -65,6 +66,35 @@ enter_vmx () {
     
 }
 
+
+update_vmx(){
+  #stop vmx
+  docker stop vmx-environment
+  docker rm vmx-tmp
+
+  mkdir -p .vmx-backup
+  #store the config
+  # docker run --name vmx-tmp --volumes-from vmx-base -i -t ubuntu /bin/bash
+  echo Starting temp container 'vmx-tmp' 
+  sudo docker run --name vmx-tmp --volumes-from vmx-base:ro ubuntu cp /vmx/build/config.json /config.json
+
+  docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/
+  docker stop vmx-tmp
+  docker rm vmx-tmp
+
+
+  #stop and update base
+  docker stop vmx-base
+  docker rm   vmx-base
+  docker pull gdoteof/vmx-base
+  docker run --name vmx-base gdoteof/vmx-base
+
+  #make a temp container for copying
+  docker run --name vmx-tmp --volumes-from vmx-base -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/config.json /vmx/build/config.json
+  docker rm vmx-tmp
+
+}
+
 [ $# -lt 1 ] && {
   usage
 }
@@ -84,7 +114,7 @@ case "$cmd" in
       echo "Downloading dependencies (this may take a while)"
       init
     fi
-    HOSTPORT=$2
+    export VMXHOSTPORT=$2
     start_vmx
     echo "Successfully started vmx"
     exit 0
@@ -92,6 +122,12 @@ case "$cmd" in
 
   stop)
     stop_vmx
+    echo "Stopped vmx"
+    exit 0
+    ;;
+
+  update)
+    update_vmx
     echo "Stopped vmx"
     exit 0
     ;;
