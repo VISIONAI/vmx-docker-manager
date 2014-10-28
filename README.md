@@ -35,4 +35,4 @@ VMX requires a few files/folder to be available:
 
 The VMX Docker manager is a set of sane defaults and configurations that store user data (session and models) in seperate volumes at /vmx/sessions and /vmx/models; and loads the binaries into /vmx/build.  Those mount points, along with the matlab MCR dependency are run within the context of an Ubuntu 14.04 with the required libraries.
 
-The dockerfiles that build the referenced dockers can be found here: https://github.com/gdoteof/vmx-public-docker
+The dockerfiles that build the referenced dockers can be found here: https://github.com/VISIONAI/vmx-public-docker
