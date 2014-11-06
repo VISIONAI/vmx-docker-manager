@@ -104,7 +104,7 @@ update_vmx(){
   usage
 }
 
-if [ $EUID != 0 ]; then
+if [ `id -u` != 0 ]; then
   echo "You need root to run docker, try \`sudo ./vmx start 3000\`"
   exit 1
 fi
