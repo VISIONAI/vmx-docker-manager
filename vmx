@@ -8,6 +8,7 @@
 cmd=$1
 config=$2
 
+PASSED=$@
 
 init () {
   docker run -d --name vmx-mcr gdoteof/vmx-mcr
@@ -18,7 +19,11 @@ init () {
 
 
 usage () {
+  echo "VMX Docker Manager by vision.ai"
+  echo "Requires docker >= 1.2; and perms to run docker"
+  echo "==============================================="
   echo "Usage: vmx COMMAND [OPTIONS]"
+  echo 
   echo "Commands:"
   echo "    start PORT:  Start vmx on localhost:PORT"
   echo "    stop:   Stop vmx"
@@ -53,7 +58,7 @@ check_perm() {
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
-    echo "try \`sudo ./vmx start 3000\`"
+    echo "try \`sudo $0 $PASSED\`"
     exit 1
   elif [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -ne 0 ]; then
     echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
@@ -128,12 +133,12 @@ update_vmx(){
 
 }
 
-check_perm
 
 [ $# -lt 1 ] && {
   usage
 }
 
+check_perm
 
 case "$cmd" in
   start)

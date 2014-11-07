@@ -9,14 +9,15 @@ Either clone the repo
 
 Or download the shell script directly: https://raw.githubusercontent.com/VISIONAI/vmx-docker-manager/master/vmx
 
-    ./vmx
     Usage: vmx COMMAND [OPTIONS]
+
     Commands:
         start PORT:  Start vmx on localhost:PORT
         stop:   Stop vmx
         enter:  Shell access to docker
         init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time y ou start vmx)
-        
+        update: update your vmx
+
         
 ##Example:
  Run vmx on port 3000
