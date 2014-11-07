@@ -1,11 +1,7 @@
 #!/bin/sh
 
 
-# CONFIG
-#########
-# CHECK_ROOT - since docker requires root access, we avoid errors by only allowing root, some configurations allow non-root users root priviledges
 
-CHECK_ROOT="true"
 
 ##PARAMS
 
@@ -33,6 +29,18 @@ usage () {
   echo " - Run vmx on port 3000"
   echo "    $  ./vmx start 3000"
   exit 1
+}
+
+check_perm() {
+  echo "Checking permissions.. !"
+  docker run busybox echo >/dev/null 2>&1
+  NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
+  if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
+    echo "Permissions failed.."
+    echo "try \`sudo ./vmx start 3000\`"
+    exit 1
+  fi
+  echo "...permissions passed!"
 }
 
 
@@ -100,15 +108,12 @@ update_vmx(){
 
 }
 
+check_perm
+
 [ $# -lt 1 ] && {
   usage
 }
 
-
-if [ `id -u` != 0 ] && [ $CHECK_ROOT == "true" ]; then
-  echo "You need root to run docker, try \`sudo ./vmx start 3000\`"
-  exit 1
-fi
 
 case "$cmd" in
   start)
