@@ -82,7 +82,16 @@ stop_vmx () {
 enter_vmx () {
   RUNNING_INSPECT=$(docker ps -a| grep 'vmx-inspect-environment' | wc -l)
   if [ "$RUNNING_INSPECT" -ne "1" ]; then
-    docker run -i -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr  --name vmx-inspect-environment --rm visionai/vmx-environment /bin/bash
+    docker run -i -t                 \
+      --volumes-from vmx-mcr         \
+      --volumes-from vmx-userdata    \
+      --volumes-from vmx-middle      \
+      --volumes-from vmx-server      \
+      --volumes-from vmx-appbuilder  \
+      -p $VMXHOSTPORT:3000           \
+      --name vmx-inspect-environment \
+      --rm                           \
+      visionai/vmx-environment /bin/bash
   else
     echo "Stopping previous inspection container.."
     docker stop vmx-inspect-environment
