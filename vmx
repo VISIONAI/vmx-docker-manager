@@ -5,7 +5,7 @@
 #########
 # CHECK_ROOT - since docker requires root access, we avoid errors by only allowing root, some configurations allow non-root users root priviledges
 
-CHECK_ROOT=true
+CHECK_ROOT="true"
 
 ##PARAMS
 
@@ -104,7 +104,8 @@ update_vmx(){
   usage
 }
 
-if [ `id -u` != 0 ]; then
+
+if [ `id -u` != 0 ] && [ $CHECK_ROOT == "true" ]; then
   echo "You need root to run docker, try \`sudo ./vmx start 3000\`"
   exit 1
 fi
