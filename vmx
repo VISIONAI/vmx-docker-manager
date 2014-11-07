@@ -62,6 +62,7 @@ check_perm() {
   echo "...permissions passed!"
 }
 
+
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
@@ -132,6 +133,7 @@ check_perm
 [ $# -lt 1 ] && {
   usage
 }
+
 
 case "$cmd" in
   start)
