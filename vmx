@@ -35,11 +35,21 @@ usage () {
   exit 1
 }
 
+boot2docker_extra() {
+    if [ `uname -a | grep boot2docker` != "" ]; then
+        VMIP=`ip addr show eth1 |sed -nEe 's/^[ \t]*inet[ \t]*([0-9.]+)\/.*$/\1/p'`
+    elif [ `uname` == "Darwin" ]; then
+        VMIP=`boot2docker ip 2>/dev/null`
+    fi
+    echo "You are using boot2docker, your local VMX url will be:"
+    echo "http://"${VMIP}":"${VMXHOSTPORT}
+}
 
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
     echo "Starting vmx with port $VMXHOSTPORT"
+    boot2docker_extra
     docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $VMXHOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
   else
     echo "Already running vmx-environment"
