@@ -32,13 +32,16 @@ usage () {
 }
 
 check_perm() {
-  echo "Checking permissions.. !"
-  docker run busybox echo >/dev/null 2>&1
+  echo "Checking permissions.."
+  docker run -rm busybox echo >/dev/null 2>&1
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
     echo "try \`sudo ./vmx start 3000\`"
     exit 1
+  elif [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -ne 0 ]; then
+    echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
+    exit $NON_ROOT_RUN_DOCKER_EXIT_CODE
   fi
   echo "...permissions passed!"
 }
