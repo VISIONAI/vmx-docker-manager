@@ -8,6 +8,7 @@
 cmd=$1
 config=$2
 
+PASSED=$@
 
 init () {
   docker run -d --name vmx-mcr gdoteof/vmx-mcr
@@ -37,7 +38,7 @@ check_perm() {
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
-    echo "try \`sudo ./vmx start 3000\`"
+    echo "try \`sudo $0 $PASSED\`"
     exit 1
   elif [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -ne 0 ]; then
     echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
