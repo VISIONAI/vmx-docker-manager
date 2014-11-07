@@ -36,6 +36,22 @@ usage () {
   exit 1
 }
 
+boot2docker_extra() {
+    IS_B2D=`uname -a | grep boot2docker`
+    if [ "$IS_B2D" != "" ]; then
+        VMIP=`ip addr show eth1 |sed -nEe 's/^[ \t]*inet[ \t]*([0-9.]+)\/.*$/\1/p'`
+    elif [ `uname` == "Darwin" ]; then
+        VMIP=`boot2docker ip 2>/dev/null`
+    else
+        VMIP=""
+    fi
+
+    if [ "$VMIP" != "" ]; then
+        echo "You are using boot2docker, your local VMX url will be:"
+        echo "http://"${VMIP}":"${VMXHOSTPORT}
+    fi    
+}
+
 check_perm() {
   echo "Checking permissions.."
   docker run -rm busybox echo >/dev/null 2>&1
@@ -66,6 +82,7 @@ start_vmx () {
       --name vmx-environment        \
       --rm                          \
       visionai/vmx-environment /vmx/middle/vmx
+    boot2docker_extra
   else
     echo "Already running vmx-environment"
     exit 1
