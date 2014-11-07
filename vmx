@@ -19,7 +19,11 @@ init () {
 
 
 usage () {
+  echo "VMX Docker Manager by vision.ai"
+  echo "Requires docker >= 1.2; and perms to run docker"
+  echo "==============================================="
   echo "Usage: vmx COMMAND [OPTIONS]"
+  echo 
   echo "Commands:"
   echo "    start PORT:  Start vmx on localhost:PORT"
   echo "    stop:   Stop vmx"
@@ -112,12 +116,12 @@ update_vmx(){
 
 }
 
-check_perm
 
 [ $# -lt 1 ] && {
   usage
 }
 
+check_perm
 
 case "$cmd" in
   start)
