@@ -1,14 +1,12 @@
 #!/bin/sh
 
-
-
-
 ##PARAMS
-
 cmd=$1
 config=$2
 
-PASSED=$@
+COMMAND=$0
+
+PARAMS=$@
 
 init () {
   docker run -d --name vmx-mcr visionai/mcr-2014a
@@ -44,7 +42,7 @@ check_perm() {
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
-    echo "try \`sudo $0 $PASSED\`"
+    echo "try \`sudo $COMMAND $PARAMS\`"
     exit 1
   elif [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -ne 0 ]; then
     echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
@@ -120,10 +118,21 @@ update_vmx(){
 
 
   #stop and update base
-  docker stop vmx-base
-  docker rm   vmx-base
-  docker pull visionai/vmx-base
-  docker run --name vmx-base visionai/vmx-base
+  docker stop vmx-middle
+  docker stop vmx-server
+  docker stop vmx-appbuilder
+
+  docker rm vmx-middle
+  docker rm vmx-server
+  docker rm vmx-appbuilder
+
+  docker pull visionai/vmx-middle
+  docker pull visionai/vmx-server
+  docker pull visionai/vmx-appbuilder
+
+  docker run --name vmx-middle visionai/vmx-middle
+  docker run --name vmx-server visionai/vmx-server
+  docker run --name vmx-appbuilder visionai/vmx-appbuilder
 
   #make a temp container for copying
   docker run --name vmx-tmp --volumes-from vmx-base -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/config.json /vmx/build/config.json
