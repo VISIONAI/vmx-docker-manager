@@ -11,9 +11,11 @@ config=$2
 PASSED=$@
 
 init () {
-  docker run -d --name vmx-mcr gdoteof/vmx-mcr
-  docker run -d --name vmx-userdata gdoteof/vmx-userdata
-  docker run -d --name vmx-base gdoteof/vmx-base
+  docker run -d --name vmx-mcr visionai/mcr-2014a
+  docker run -d --name vmx-userdata visionai/vmx-userdata
+  docker run -d --name vmx-middle visionai/vmx-middle
+  docker run -d --name vmx-server visionai/vmx-server
+  docker run -d --name vmx-appbuilder visionai/vmx-appbuilder
   touch .vmx-init
 }
 
@@ -56,7 +58,16 @@ start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
     echo "Starting vmx with port $VMXHOSTPORT"
-    docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $VMXHOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
+    docker run -t                   \
+      --volumes-from vmx-mcr        \
+      --volumes-from vmx-userdata   \
+      --volumes-from vmx-middle     \
+      --volumes-from vmx-server     \
+      --volumes-from vmx-appbuilder \
+      -p $VMXHOSTPORT:3000          \
+      --name vmx-environment        \
+      --rm                          \
+      visionai/vmx-environment /vmx/middle/vmx
   else
     echo "Already running vmx-environment"
     exit 1
@@ -71,7 +82,7 @@ stop_vmx () {
 enter_vmx () {
   RUNNING_INSPECT=$(docker ps -a| grep 'vmx-inspect-environment' | wc -l)
   if [ "$RUNNING_INSPECT" -ne "1" ]; then
-    docker run -i -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr  --name vmx-inspect-environment --rm gdoteof/vmx-environment /bin/bash
+    docker run -i -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr  --name vmx-inspect-environment --rm visionai/vmx-environment /bin/bash
   else
     echo "Stopping previous inspection container.."
     docker stop vmx-inspect-environment
@@ -102,8 +113,8 @@ update_vmx(){
   #stop and update base
   docker stop vmx-base
   docker rm   vmx-base
-  docker pull gdoteof/vmx-base
-  docker run --name vmx-base gdoteof/vmx-base
+  docker pull visionai/vmx-base
+  docker run --name vmx-base visionai/vmx-base
 
   #make a temp container for copying
   docker run --name vmx-tmp --volumes-from vmx-base -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/config.json /vmx/build/config.json
