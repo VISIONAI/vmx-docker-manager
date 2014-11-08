@@ -1,19 +1,19 @@
 #!/bin/sh
 
-
-
-
 ##PARAMS
-
 cmd=$1
 config=$2
 
-PASSED=$@
+COMMAND=$0
+
+PARAMS=$@
 
 init () {
-  docker run -d --name vmx-mcr gdoteof/vmx-mcr
-  docker run -d --name vmx-userdata gdoteof/vmx-userdata
-  docker run -d --name vmx-base gdoteof/vmx-base
+  docker run -d --name vmx-mcr visionai/mcr-2014a
+  docker run -d --name vmx-userdata visionai/vmx-userdata
+  docker run -d --name vmx-middle visionai/vmx-middle
+  docker run -d --name vmx-server visionai/vmx-server
+  docker run -d --name vmx-appbuilder visionai/vmx-appbuilder
   touch .vmx-init
 }
 
@@ -53,18 +53,16 @@ boot2docker_extra() {
 }
 
 check_perm() {
-  echo "Checking permissions.."
   docker run -rm busybox echo >/dev/null 2>&1
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
-    echo "try \`sudo $0 $PASSED\`"
+    echo "try \`sudo $COMMAND $PARAMS\`"
     exit 1
   elif [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -ne 0 ]; then
     echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
     exit $NON_ROOT_RUN_DOCKER_EXIT_CODE
   fi
-  echo "...permissions passed!"
 }
 
 
@@ -73,7 +71,16 @@ start_vmx () {
   if [ "$RUNNING" -ne "1" ]; then
     echo "Starting vmx with port $VMXHOSTPORT"
     boot2docker_extra
-    docker run -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr -p $VMXHOSTPORT:3000 --name vmx-environment --rm gdoteof/vmx-environment /vmx/build/vmx
+    docker run -t                   \
+      --volumes-from vmx-mcr        \
+      --volumes-from vmx-userdata   \
+      --volumes-from vmx-middle     \
+      --volumes-from vmx-server     \
+      --volumes-from vmx-appbuilder \
+      -p $VMXHOSTPORT:3000          \
+      --name vmx-environment        \
+      --rm                          \
+      visionai/vmx-environment /vmx/middle/vmx
   else
     echo "Already running vmx-environment"
     exit 1
@@ -88,7 +95,16 @@ stop_vmx () {
 enter_vmx () {
   RUNNING_INSPECT=$(docker ps -a| grep 'vmx-inspect-environment' | wc -l)
   if [ "$RUNNING_INSPECT" -ne "1" ]; then
-    docker run -i -t --volumes-from vmx-userdata --volumes-from vmx-base --volumes-from vmx-mcr  --name vmx-inspect-environment --rm gdoteof/vmx-environment /bin/bash
+    docker run -i -t                 \
+      --volumes-from vmx-mcr         \
+      --volumes-from vmx-userdata    \
+      --volumes-from vmx-middle      \
+      --volumes-from vmx-server      \
+      --volumes-from vmx-appbuilder  \
+      -p $VMXHOSTPORT:3000           \
+      --name vmx-inspect-environment \
+      --rm                           \
+      visionai/vmx-environment /bin/bash
   else
     echo "Stopping previous inspection container.."
     docker stop vmx-inspect-environment
@@ -117,10 +133,21 @@ update_vmx(){
 
 
   #stop and update base
-  docker stop vmx-base
-  docker rm   vmx-base
-  docker pull gdoteof/vmx-base
-  docker run --name vmx-base gdoteof/vmx-base
+  docker stop vmx-middle
+  docker stop vmx-server
+  docker stop vmx-appbuilder
+
+  docker rm vmx-middle
+  docker rm vmx-server
+  docker rm vmx-appbuilder
+
+  docker pull visionai/vmx-middle
+  docker pull visionai/vmx-server
+  docker pull visionai/vmx-appbuilder
+
+  docker run --name vmx-middle visionai/vmx-middle
+  docker run --name vmx-server visionai/vmx-server
+  docker run --name vmx-appbuilder visionai/vmx-appbuilder
 
   #make a temp container for copying
   docker run --name vmx-tmp --volumes-from vmx-base -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/config.json /vmx/build/config.json
