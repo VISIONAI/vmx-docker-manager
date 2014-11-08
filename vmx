@@ -53,7 +53,6 @@ boot2docker_extra() {
 }
 
 check_perm() {
-  echo "Checking permissions.."
   docker run -rm busybox echo >/dev/null 2>&1
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
@@ -64,7 +63,6 @@ check_perm() {
     echo "Trying to run docker resulted in exit code: $NON_ROOT_RUN_DOCKER_EXIT_CODE"
     exit $NON_ROOT_RUN_DOCKER_EXIT_CODE
   fi
-  echo "...permissions passed!"
 }
 
 
@@ -72,6 +70,7 @@ start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
     echo "Starting vmx with port $VMXHOSTPORT"
+    boot2docker_extra
     docker run -t                   \
       --volumes-from vmx-mcr        \
       --volumes-from vmx-userdata   \
@@ -82,7 +81,6 @@ start_vmx () {
       --name vmx-environment        \
       --rm                          \
       visionai/vmx-environment /vmx/middle/vmx
-    boot2docker_extra
   else
     echo "Already running vmx-environment"
     exit 1
