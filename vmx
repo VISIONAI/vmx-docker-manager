@@ -71,9 +71,10 @@ check_perm() {
 }
 
 backup_userdata () {
-  docker run --name vmx-tmp --volumes-from vmx-userdata:ro ubuntu /bin/bash -c "cd /vmx && find"
-  docker cp vmx-tmp:/vmx/models `pwd`/.vmx-backup/$FOLDERNAME
-  docker cp vmx-tmp:/vmx/sessions `pwd`/.vmx-backup/$FOLDERNAME
+  #Docker does not support copying out of volumes: https://github.com/docker/docker/issues/1992
+  docker run --name vmx-tmp --volumes-from vmx-userdata:rw ubuntu /bin/bash -c "cp -r /vmx/sessions /tmp/sessions && cp -r /vmx/models /tmp/models && cd /tmp && find"
+  docker cp vmx-tmp:/tmp/models `pwd`/.vmx-backup/$FOLDERNAME
+  docker cp vmx-tmp:/tmp/sessions `pwd`/.vmx-backup/$FOLDERNAME
   docker stop vmx-tmp
   docker rm   vmx-tmp
 }
