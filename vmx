@@ -101,7 +101,7 @@ start_vmx () {
       -p $VMXHOSTPORT:3000          \
       --name vmx-environment        \
       --rm                          \
-      visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee vmx_log"
+      visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log"
   else
     echo "Already running vmx-environment"
     exit 1
