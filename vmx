@@ -38,10 +38,9 @@ usage () {
 
 boot2docker_extra() {
     IS_B2D=`uname -a | grep boot2docker`
-    UNAME=$(uname)
     if [ "$IS_B2D" != "" ]; then
         VMIP=`ip addr show eth1 |sed -nEe 's/^[ \t]*inet[ \t]*([0-9.]+)\/.*$/\1/p'`
-    elif [ $UNAME == "Darwin" ]; then
+    elif [ `uname` = "Darwin" ]; then
         VMIP=`boot2docker ip 2>/dev/null`
     else
         VMIP=""
