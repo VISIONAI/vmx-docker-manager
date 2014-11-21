@@ -123,16 +123,15 @@ update_vmx(){
 
   mkdir -p .vmx-backup
   #store the config
-  # docker run --name vmx-tmp --volumes-from vmx-base -i -t ubuntu /bin/bash
   echo Starting temp container 'vmx-tmp' 
-  sudo docker run --name vmx-tmp --volumes-from vmx-base:ro ubuntu cp /vmx/build/config.json /config.json
+  sudo docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
 
   docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/
   docker stop vmx-tmp
   docker rm vmx-tmp
 
 
-  #stop and update base
+  #stop and update 
   docker stop vmx-middle
   docker stop vmx-server
   docker stop vmx-appbuilder
