@@ -8,7 +8,10 @@ COMMAND=$0
 
 PARAMS=$@
 
+FOLDERNAME=`date +%Y%a%b%d_%H%M%S`
+
 init () {
+  echo "Starting containers..."
   docker run -d --name vmx-mcr visionai/mcr-2014a
   docker run -d --name vmx-userdata visionai/vmx-userdata
   docker run -d --name vmx-middle visionai/vmx-middle
@@ -30,9 +33,14 @@ usage () {
   echo "    enter:  Shell access to docker"
   echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time y ou start vmx)"
   echo "    update: update your vmx"
-  echo "Example:"
+  echo "    backup: backup your VMX data"
+  echo "Examples:"
   echo " - Run vmx on port 3000"
   echo "    $  ./vmx start 3000"
+  echo " - Backup your data to " `pwd`/.vmx-backup/
+  echo "    $  ./vmx backup"
+  echo " - Restore from a backup "
+  echo "    $  ./vmx restore ./vmx-backup/2014_FriNov21_20_04"
   exit 1
 }
 
@@ -65,6 +73,46 @@ check_perm() {
   fi
 }
 
+restore_userdata () {
+  #Docker does not support copying out of volumes: https://github.com/docker/docker/issues/1992
+  init
+  echo "Restoring models.."
+  docker run --name vmx-tmp \
+        --volumes-from vmx-userdata \
+	-v `pwd`/$RESTOREDIR:/restore \
+        -t \
+        ubuntu \
+	bash -c "find /restore && find /vmx && cp -r /restore/models/* /vmx/models"
+  docker stop vmx-tmp
+  docker rm   vmx-tmp
+  echo "Restoring license..."
+  docker run --name vmx-tmp \
+	--volumes-from vmx-server  \
+        -v `pwd`/$RESTOREDIR:/restore \
+        -t  \
+        ubuntu cp /restore/config.json /vmx/build/config.json
+
+  docker stop vmx-tmp
+  docker rm   vmx-tmp
+}
+
+backup_userdata () {
+  #Docker does not support copying out of volumes: https://github.com/docker/docker/issues/1992
+  docker run --name vmx-tmp --volumes-from vmx-userdata:rw ubuntu /bin/bash -c "cp -r /vmx/sessions /tmp/sessions && cp -r /vmx/models /tmp/models && cd /tmp && find"
+  docker cp vmx-tmp:/tmp/models `pwd`/.vmx-backup/$FOLDERNAME
+  docker cp vmx-tmp:/tmp/sessions `pwd`/.vmx-backup/$FOLDERNAME
+  docker stop vmx-tmp
+  docker rm   vmx-tmp
+}
+
+
+backup_config () {
+  echo "doing config backup..."
+  docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
+  docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/$FOLDERNAME
+  docker stop vmx-tmp
+  docker rm   vmx-tmp
+}
 
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
@@ -80,7 +128,7 @@ start_vmx () {
       -p $VMXHOSTPORT:3000          \
       --name vmx-environment        \
       --rm                          \
-      visionai/vmx-environment /vmx/middle/vmx
+      visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log"
   else
     echo "Already running vmx-environment"
     exit 1
@@ -101,7 +149,6 @@ enter_vmx () {
       --volumes-from vmx-middle      \
       --volumes-from vmx-server      \
       --volumes-from vmx-appbuilder  \
-      -p $VMXHOSTPORT:3000           \
       --name vmx-inspect-environment \
       --rm                           \
       visionai/vmx-environment /bin/bash
@@ -121,12 +168,12 @@ update_vmx(){
   docker stop vmx-environment
   docker rm vmx-tmp
 
-  mkdir -p .vmx-backup
+  mkdir -p .vmx-backup/$FOLDERNAME
   #store the config
   echo Starting temp container 'vmx-tmp' 
   sudo docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
 
-  docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/
+  docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/$FOLDERNAME
   docker stop vmx-tmp
   docker rm vmx-tmp
 
@@ -197,6 +244,35 @@ case "$cmd" in
   enter)
     enter_vmx
     exit 0
+    ;;
+
+  backup)
+    docker rm vmx-tmp > /dev/null 2> /dev/null
+    backup_userdata
+    backup_config
+    exit 0
+    ;;
+
+  restore)
+    if [ $# -lt 2 ]; then
+      echo "Must supply directory"
+      if [ ! -d .vmx-backup ]; then
+          echo "No .vmx-backup found.. have you done any backups?"
+      else
+	 echo "try one of "
+	 for b in .vmx-backup/*
+         do
+	 echo ./vmx restore $b "\n"
+         done
+
+         exit 1
+      fi
+    fi    
+    if [ ! -f $RESTOREDIR/config.json ]; then
+      echo config.json not found in $RESTOREDIR
+    fi
+    RESTOREDIR=$2 
+    restore_userdata
     ;;
 
   init)
