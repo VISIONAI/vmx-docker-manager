@@ -117,7 +117,13 @@ backup_config () {
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
-    echo "Starting vmx with port $VMXHOSTPORT"
+    echo "VMX starting with port $VMXHOSTPORT"
+    echo "--------------------------------------"
+    echo "visit http://localhost:$VMXHOSTPORT   "
+    echo 
+    echo "Ctrl-c to detach terminal from the log"
+    echo "./vmx stop to stop the vmx daemon"
+    echo 
     boot2docker_extra
     docker run -t                   \
       --volumes-from vmx-mcr        \
@@ -129,6 +135,15 @@ start_vmx () {
       --name vmx-environment        \
       --rm                          \
       visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log"
+
+    #if it fails for some reason, clean up our mess pass the error code
+    prev=$?
+    if [ "$prev" -eq "1" ]; then
+      docker rm vmx-environment
+      exit $prev
+    else
+      echo "Successfully started vmx"
+    fi
   else
     echo "Already running vmx-environment"
     exit 1
@@ -225,7 +240,6 @@ case "$cmd" in
     fi
     export VMXHOSTPORT=$2
     start_vmx
-    echo "Successfully started vmx"
     exit 0
     ;;
 
