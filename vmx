@@ -146,13 +146,15 @@ start_vmx () {
     fi
   else
     echo "Already running vmx-environment"
+    echo "You must first run ./vmx stop"
     exit 1
   fi
 }
 
 stop_vmx () {
-  docker stop vmx-environment
-  docker rm   vmx-environment
+  echo 'Stopping VMX'
+  docker stop vmx-environment 2> /dev/null
+  docker rm   vmx-environment 2> /dev/null
 }
 
 enter_vmx () {
@@ -180,8 +182,8 @@ enter_vmx () {
 
 update_vmx(){
   #stop vmx
-  docker stop vmx-environment
-  docker rm vmx-tmp
+  docker stop vmx-environment 2>/dev/null
+  docker rm vmx-tmp 2>/dev/null
 
   mkdir -p .vmx-backup/$FOLDERNAME
   #store the config
@@ -214,7 +216,7 @@ update_vmx(){
   docker run --name vmx-tmp --volumes-from vmx-server -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/$FOLDERNAME/config.json /vmx/build/config.json
   docker rm vmx-tmp
 
-  docker rm vmx-environment
+  docker rm vmx-environment 2> /dev/null
 
   echo "Successfully updated, you can now restart VMX"
   exit 0
