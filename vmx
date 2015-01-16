@@ -12,11 +12,11 @@ FOLDERNAME=`date +%Y%a%b%d_%H%M%S`
 
 init () {
   echo "Starting containers..."
-  docker run -d --name vmx-mcr visionai/mcr-2014a
-  docker run -d --name vmx-userdata visionai/vmx-userdata
-  docker run -d --name vmx-middle visionai/vmx-middle
-  docker run -d --name vmx-server visionai/vmx-server
-  docker run -d --name vmx-appbuilder visionai/vmx-appbuilder
+  docker run -d --name vmx-mcr visionai/mcr-2014a 2>/dev/null
+  docker run -d --name vmx-userdata visionai/vmx-userdata 2>/dev/null
+  docker run -d --name vmx-middle visionai/vmx-middle 2>/dev/null
+  docker run -d --name vmx-server visionai/vmx-server 2>/dev/null
+  docker run -d --name vmx-appbuilder visionai/vmx-appbuilder 2>/dev/null
   touch .vmx-init
 }
 
@@ -28,19 +28,30 @@ usage () {
   echo "Usage: vmx COMMAND [OPTIONS]"
   echo 
   echo "Commands:"
-  echo "    start PORT:  Start vmx on localhost:PORT"
-  echo "    stop:   Stop vmx"
-  echo "    enter:  Shell access to docker"
-  echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time you start vmx)"
-  echo "    update: update your vmx"
-  echo "    backup: backup your VMX data"
+  echo "    start PORT: Start vmx on localhost:PORT"
+  echo "    stop:       Stop vmx"
+  echo "    enter:      Shell access to inspect vmx volumes"
+  echo "    init:       Download and start the containers that have the pre-reqs, mcr, etc."
+  echo "                (This is done automatically the first time you start vmx)"
+  echo "    update TAG: Update your vmx"
+  echo "    backup:     Backup your vmx data (models, session logs, config file)"
   echo "Examples:"
   echo " - Run vmx on port 3000"
   echo "    $  ./vmx start 3000"
+  echo " - Stop vmx"
+  echo "    $  ./vmx stop"
+  echo " "
   echo " - Backup your data to " `pwd`/.vmx-backup/
   echo "    $  ./vmx backup"
-  echo " - Restore from a backup "
-  echo "    $  ./vmx restore ./vmx-backup/2014_FriNov21_20_04"
+  echo " - Restore from a backup"
+  echo "    $  ./vmx restore .vmx-backup/2014_FriNov21_20_04"
+  echo " "
+  echo " - Update vmx to latest (stable) version"
+  echo "    $  ./vmx update"
+  echo "   or"
+  echo "    $  ./vmx update latest"
+  echo " - Update vmx to dev version"
+  echo "    $  ./vmx update dev"
   exit 1
 }
 
@@ -55,7 +66,7 @@ boot2docker_extra() {
     fi
 
     if [ "$VMIP" != "" ]; then
-        echo "You are using boot2docker, your local VMX url will be:"
+        echo "You are using boot2docker, your local vmx url will be:"
         echo "http://"${VMIP}":"${VMXHOSTPORT}
     fi    
 }
@@ -117,7 +128,7 @@ backup_config () {
 start_vmx () {
   RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
   if [ "$RUNNING" -ne "1" ]; then
-    echo "VMX starting with port $VMXHOSTPORT"
+    echo "vmx starting with port $VMXHOSTPORT"
     echo "--------------------------------------"
     echo "visit http://localhost:$VMXHOSTPORT   "
     echo 
@@ -134,12 +145,13 @@ start_vmx () {
       -p $VMXHOSTPORT:3000          \
       --name vmx-environment        \
       --rm                          \
-      visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log"
+      visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log" 2> /dev/null
 
     #if it fails for some reason, clean up our mess pass the error code
     prev=$?
     if [ "$prev" -eq "1" ]; then
-      docker rm vmx-environment
+      echo "Failed to start vmx. Try \"./vmx init\" first"
+      docker rm vmx-environment 2> /dev/null
       exit $prev
     else
       echo "Successfully started vmx"
@@ -152,7 +164,7 @@ start_vmx () {
 }
 
 stop_vmx () {
-  echo 'Stopping VMX'
+  echo 'Stopping vmx'
   docker stop vmx-environment 2> /dev/null
   docker rm   vmx-environment 2> /dev/null
 }
@@ -160,7 +172,8 @@ stop_vmx () {
 enter_vmx () {
   RUNNING_INSPECT=$(docker ps -a| grep 'vmx-inspect-environment' | wc -l)
   if [ "$RUNNING_INSPECT" -ne "1" ]; then
-    docker run -i -t                 \
+    echo "Entering a temporary inspect container"
+    docker run -w /vmx/ -i -t        \
       --volumes-from vmx-mcr         \
       --volumes-from vmx-userdata    \
       --volumes-from vmx-middle      \
@@ -171,9 +184,9 @@ enter_vmx () {
       visionai/vmx-environment /bin/bash
   else
     echo "Stopping previous inspection container.."
-    docker stop vmx-inspect-environment
+    docker stop vmx-inspect-environment 2>/dev/null
     echo "Removing previous inspection container.."
-    docker rm vmx-inspect-environment
+    docker rm vmx-inspect-environment 2>/dev/null
     enter_vmx
   fi
     
@@ -191,34 +204,41 @@ update_vmx(){
   docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
 
   docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/$FOLDERNAME
-  docker stop vmx-tmp
-  docker rm vmx-tmp
+  docker stop vmx-tmp 2>/dev/null
+  docker rm vmx-tmp 2>/dev/null
 
 
   #stop and update 
-  docker stop vmx-middle
-  docker stop vmx-server
-  docker stop vmx-appbuilder
+  docker stop vmx-middle 2>/dev/null
+  docker stop vmx-server 2>/dev/null
+  docker stop vmx-appbuilder 2>/dev/null
 
-  docker rm vmx-middle
-  docker rm vmx-server
-  docker rm vmx-appbuilder
+  docker rm vmx-middle 2>/dev/null
+  docker rm vmx-server 2>/dev/null
+  docker rm vmx-appbuilder 2>/dev/null
 
-  docker pull visionai/vmx-middle
-  docker pull visionai/vmx-server
-  docker pull visionai/vmx-appbuilder
+  docker pull visionai/vmx-middle:$VMXTAG
+  docker pull visionai/vmx-server:$VMXTAG
+  docker pull visionai/vmx-appbuilder:$VMXTAG
 
-  docker run --name vmx-middle visionai/vmx-middle
-  docker run --name vmx-server visionai/vmx-server
-  docker run --name vmx-appbuilder visionai/vmx-appbuilder
+  docker run --name vmx-middle visionai/vmx-middle:$VMXTAG
+  A=$?
+  docker run --name vmx-server visionai/vmx-server:$VMXTAG
+  B=$?
+  docker run --name vmx-appbuilder visionai/vmx-appbuilder:$VMXTAG
+  C=$?
 
   #make a temp container for copying
   docker run --name vmx-tmp --volumes-from vmx-server -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/$FOLDERNAME/config.json /vmx/build/config.json
   docker rm vmx-tmp
 
   docker rm vmx-environment 2> /dev/null
-
-  echo "Successfully updated, you can now restart VMX"
+  
+  if [ "$A$B$C" == "000" ]; then
+      echo "Successfully updated, you can now restart vmx"
+  else
+      echo "Problem updating vmx"
+  fi
   exit 0
 
 }
@@ -252,6 +272,7 @@ case "$cmd" in
     ;;
 
   update)
+    export VMXTAG=$2
     update_vmx
     echo "Stopped vmx"
     exit 0
@@ -293,7 +314,7 @@ case "$cmd" in
 
   init)
     init
-    echo "Successfully boostrapped!"
+    echo "Successfully initialized vmx!"
     exit 0
     ;;
 
