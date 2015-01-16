@@ -186,7 +186,7 @@ update_vmx(){
   mkdir -p .vmx-backup/$FOLDERNAME
   #store the config
   echo Starting temp container 'vmx-tmp' 
-  sudo docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
+  docker run --name vmx-tmp --volumes-from vmx-server:ro ubuntu cp /vmx/build/config.json /config.json
 
   docker cp vmx-tmp:/config.json `pwd`/.vmx-backup/$FOLDERNAME
   docker stop vmx-tmp
@@ -211,7 +211,7 @@ update_vmx(){
   docker run --name vmx-appbuilder visionai/vmx-appbuilder
 
   #make a temp container for copying
-  docker run --name vmx-tmp --volumes-from vmx-server -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/config.json /vmx/build/config.json
+  docker run --name vmx-tmp --volumes-from vmx-server -v `pwd`/.vmx-backup:/vmx-backup ubuntu cp /vmx-backup/$FOLDERNAME/config.json /vmx/build/config.json
   docker rm vmx-tmp
 
   docker rm vmx-environment
