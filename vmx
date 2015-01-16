@@ -33,7 +33,7 @@ usage () {
   echo "    enter:      Shell access to inspect vmx volumes"
   echo "    init:       Download and start the containers that have the pre-reqs, mcr, etc."
   echo "                (This is done automatically the first time you start vmx)"
-  echo "    update TAG: Update your vmx"
+  echo "    update TAG: Update your vmx (will stop vmx first)"
   echo "    backup:     Backup your vmx data (models, session logs, config file)"
   echo "Examples:"
   echo " - Run vmx on port 3000"
