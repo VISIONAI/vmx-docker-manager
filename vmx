@@ -35,6 +35,8 @@ usage () {
   echo "                (This is done automatically the first time you start vmx)"
   echo "    update TAG: Update your vmx (will stop vmx first)"
   echo "    backup:     Backup your vmx data (models, session logs, config file)"
+  echo "    restore BACKUP: Restore models/logs/config from folder BACKUP"
+  echo " "
   echo "Examples:"
   echo " - Run vmx on port 3000"
   echo "    $  ./vmx start 3000"

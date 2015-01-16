@@ -19,7 +19,8 @@ Or download the shell script directly: https://raw.githubusercontent.com/VISIONA
                     (This is done automatically the first time you start vmx)
         update TAG: Update your vmx (will stop vmx first). TAG must be
                     "latest" or "dev", defaults to "latest"
-        backup:     Backup your vmx data (models, session logs, config file)
+        backup BACKUP: Backup your vmx data (models, session logs,
+                       config file) to folder BACKUP
         
 ##Example:
  Run vmx on port 3000
@@ -30,7 +31,7 @@ Or download the shell script directly: https://raw.githubusercontent.com/VISIONA
 
     $ ./vmx stop
 
- Backup your data to  /Users/tomasz/projects/vmx-docker-manager/.vmx-backup/
+ Backup your data to vmx-docker-manager/.vmx-backup/
 
     $  ./vmx backup
     
