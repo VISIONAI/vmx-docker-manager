@@ -234,7 +234,7 @@ update_vmx(){
 
   docker rm vmx-environment 2> /dev/null
   
-  if [ "$A$B$C" == "000" ]; then
+  if [ "$A$B$C" = "000" ]; then
       echo "Successfully updated, you can now restart vmx"
   else
       echo "Problem updating vmx"
