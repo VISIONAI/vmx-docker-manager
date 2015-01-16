@@ -31,7 +31,7 @@ usage () {
   echo "    start PORT:  Start vmx on localhost:PORT"
   echo "    stop:   Stop vmx"
   echo "    enter:  Shell access to docker"
-  echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time y ou start vmx)"
+  echo "    init :  download and start the containers that have the pre-reqs, mcr, etc. (This is done automatically the first time you start vmx)"
   echo "    update: update your vmx"
   echo "    backup: backup your VMX data"
   echo "Examples:"
