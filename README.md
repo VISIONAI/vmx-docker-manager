@@ -67,8 +67,8 @@ The VMX Docker manager is a set of sane defaults and configurations that store u
 
 The dockerfiles that build the referenced docker images can be found here:
 
-https://github.com/VISIONAI/docker-mcr-2014a
-https://github.com/VISIONAI/docker-vmx-userdata
-https://github.com/VISIONAI/docker-vmx-middle
-https://github.com/VISIONAI/docker-vmx-server
-https://github.com/VISIONAI/docker-vmx-appbuilder
+- https://github.com/VISIONAI/docker-mcr-2014a
+- https://github.com/VISIONAI/docker-vmx-userdata
+- https://github.com/VISIONAI/docker-vmx-middle
+- https://github.com/VISIONAI/docker-vmx-server
+- https://github.com/VISIONAI/docker-vmx-appbuilder
