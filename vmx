@@ -12,11 +12,15 @@ FOLDERNAME=`date +%Y%a%b%d_%H%M%S`
 
 init () {
   echo "Starting containers..."
+  if [ "$VMXTAG" = ""]; then
+      VMXTAG=":$VMXTAG"
+  fi
+  
   docker run -d --name vmx-mcr visionai/mcr-2014a 2>/dev/null
   docker run -d --name vmx-userdata visionai/vmx-userdata 2>/dev/null
-  docker run -d --name vmx-middle visionai/vmx-middle 2>/dev/null
-  docker run -d --name vmx-server visionai/vmx-server 2>/dev/null
-  docker run -d --name vmx-appbuilder visionai/vmx-appbuilder 2>/dev/null
+  docker run -d --name vmx-middle:$VMXTAG visionai/vmx-middle 2>/dev/null
+  docker run -d --name vmx-server:$VMXTAG visionai/vmx-server 2>/dev/null
+  docker run -d --name vmx-appbuilder:$VMXTAG visionai/vmx-appbuilder 2>/dev/null
   touch .vmx-init
 }
 
@@ -48,11 +52,12 @@ usage () {
   echo " - Restore from a backup"
   echo "    $  ./vmx restore .vmx-backup/2014_FriNov21_20_04"
   echo " "
-  echo " - Update vmx to latest (stable) version"
+  echo " - Update vmx to the latest version (this is the stable one)"
   echo "    $  ./vmx update"
   echo "   or"
   echo "    $  ./vmx update latest"
-  echo " - Update vmx to dev version"
+  echo " "
+  echo " - Update vmx to dev version (this is the bleeding-edge release)"
   echo "    $  ./vmx update dev"
   exit 1
 }
@@ -263,6 +268,7 @@ case "$cmd" in
       init
     fi
     export VMXHOSTPORT=$2
+    export VMXTAG=$3
     start_vmx
     exit 0
     ;;
@@ -276,7 +282,8 @@ case "$cmd" in
   update)
     export VMXTAG=$2
     update_vmx
-    echo "Stopped vmx"
+    init
+    echo "Updated vmx"
     exit 0
     ;;
 
