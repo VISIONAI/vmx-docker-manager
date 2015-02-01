@@ -1,5 +1,14 @@
+##VMX: The vision.ai object detection/recognition server
+
+    VMX makes computer vision easy.  Docker makes bundling complex
+    applications easy.  The vmx-docker-manager lets you run the VMX
+    Object Detection server on a Linux computer, or a (Mac/Windows)
+    machine via boot2docker. [We also provide a non-docker native Mac
+    OS X build of VMX].
+
 ##Requirements
-    64 bit linux and docker >= 1.2
+    64 bit Linux and Docker >= 1.2
+    boot2docker for Mac or Windows
 
 ##Instructions
 
