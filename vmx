@@ -233,8 +233,6 @@ update_vmx(){
   docker rm vmx-server 2>/dev/null
   docker rm vmx-appbuilder 2>/dev/null
 
-  echo 'tag is' $VMXTAG
-
   docker pull visionai/vmx-middle$VMXTAG
   docker pull visionai/vmx-server$VMXTAG
   docker pull visionai/vmx-appbuilder$VMXTAG
