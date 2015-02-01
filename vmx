@@ -1,5 +1,12 @@
 #!/bin/sh
-
+# VMX Docker Manager by vision.ai
+# Starts the vision.ai object recognition server
+# Requires docker >= 1.2; and perms to run docker
+# Visit us on the web: 
+#   https://vision.ai
+# Github repository for this file:
+#   https://github.com/VISIONAI/vmx-docker-manager
+#
 ##PARAMS
 cmd=$1
 config=$2
@@ -23,6 +30,7 @@ init () {
 
 usage () {
   echo "VMX Docker Manager by vision.ai"
+  echo "Version: " `git describe --tags --dirty 2>/dev/null || echo no-git`
   echo "Requires docker >= 1.2; and perms to run docker"
   echo "==============================================="
   echo "Usage: vmx COMMAND [OPTIONS]"
@@ -54,6 +62,10 @@ usage () {
   echo "    $  ./vmx update latest"
   echo " - Update vmx to dev version"
   echo "    $  ./vmx update dev"
+  echo " "
+  echo " - Update the vmx-docker-manager"
+  echo "    $  git pull"
+
   exit 1
 }
 
@@ -238,6 +250,7 @@ update_vmx(){
   
   if [ "$A$B$C" = "000" ]; then
       echo "Successfully updated, you can now restart vmx"
+      echo "To update the vmx-docker-manager, run: git pull"
   else
       echo "Problem updating vmx"
   fi
