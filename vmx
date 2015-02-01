@@ -1,7 +1,7 @@
 #!/bin/sh
 # VMX Docker Manager by vision.ai
 # Starts the vision.ai object recognition server
-# Requires docker >= 1.2; and perms to run docker
+# Requires docker >= 1.2; and permissions to run docker
 # Visit us on the web: 
 #   https://vision.ai
 # Github repository for this file:
@@ -19,15 +19,12 @@ FOLDERNAME=`date +%Y%a%b%d_%H%M%S`
 
 init () {
   echo "Starting containers..."
-  if [ "$VMXTAG" = ""]; then
-      VMXTAG=":$VMXTAG"
-  fi
   
   docker run -d --name vmx-mcr visionai/mcr-2014a 2>/dev/null
   docker run -d --name vmx-userdata visionai/vmx-userdata 2>/dev/null
-  docker run -d --name vmx-middle:$VMXTAG visionai/vmx-middle 2>/dev/null
-  docker run -d --name vmx-server:$VMXTAG visionai/vmx-server 2>/dev/null
-  docker run -d --name vmx-appbuilder:$VMXTAG visionai/vmx-appbuilder 2>/dev/null
+  docker run -d --name vmx-middle$VMXTAG visionai/vmx-middle 2>/dev/null
+  docker run -d --name vmx-server$VMXTAG visionai/vmx-server 2>/dev/null
+  docker run -d --name vmx-appbuilder$VMXTAG visionai/vmx-appbuilder 2>/dev/null
   touch .vmx-init
 }
 
@@ -35,7 +32,7 @@ init () {
 usage () {
   echo "VMX Docker Manager by vision.ai"
   echo "Version: " `git describe --tags --dirty 2>/dev/null || echo no-git`
-  echo "Requires docker >= 1.2; and perms to run docker"
+  echo "Requires docker >= 1.2; and permissions to run docker"
   echo "==============================================="
   echo "Usage: vmx COMMAND [OPTIONS]"
   echo 
@@ -236,15 +233,15 @@ update_vmx(){
   docker rm vmx-server 2>/dev/null
   docker rm vmx-appbuilder 2>/dev/null
 
-  docker pull visionai/vmx-middle:$VMXTAG
-  docker pull visionai/vmx-server:$VMXTAG
-  docker pull visionai/vmx-appbuilder:$VMXTAG
+  docker pull visionai/vmx-middle$VMXTAG
+  docker pull visionai/vmx-server$VMXTAG
+  docker pull visionai/vmx-appbuilder$VMXTAG
 
-  docker run --name vmx-middle visionai/vmx-middle:$VMXTAG
+  docker run --name vmx-middle visionai/vmx-middle$VMXTAG
   A=$?
-  docker run --name vmx-server visionai/vmx-server:$VMXTAG
+  docker run --name vmx-server visionai/vmx-server$VMXTAG
   B=$?
-  docker run --name vmx-appbuilder visionai/vmx-appbuilder:$VMXTAG
+  docker run --name vmx-appbuilder visionai/vmx-appbuilder$VMXTAG
   C=$?
 
   #make a temp container for copying
@@ -281,7 +278,6 @@ case "$cmd" in
       init
     fi
     export VMXHOSTPORT=$2
-    export VMXTAG=$3
     start_vmx
     exit 0
     ;;
@@ -293,7 +289,13 @@ case "$cmd" in
     ;;
 
   update)
+    
+    #Keep an empty TAG empy, and turn "dev" into ":dev"
     export VMXTAG=$2
+    if [ "$VMXTAG" != "" ]; then
+      VMXTAG=":$VMXTAG"
+    fi
+
     update_vmx
     init
     echo "Updated vmx"
@@ -318,10 +320,12 @@ case "$cmd" in
       if [ ! -d .vmx-backup ]; then
           echo "No .vmx-backup found.. have you done any backups?"
       else
-	 echo "try one of "
+	 echo "Try one of the following commands:"
 	 for b in .vmx-backup/*
          do
-	 echo ./vmx restore $b "\n"
+	     echo ./vmx restore $b
+             NMODELS=`ls $b/models 2>/dev/null | wc -l`
+             echo "Has ${NMODELS} models\n"
          done
 
          exit 1
