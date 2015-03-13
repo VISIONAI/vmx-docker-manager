@@ -158,7 +158,8 @@ start_vmx () {
       --volumes-from vmx-middle     \
       --volumes-from vmx-server     \
       --volumes-from vmx-appbuilder \
-      -p $VMXHOSTPORT:3000          \
+      -p 127.0.0.1:$VMXHOSTPORT:3000          \
+      -e VIRTUAL_HOST=*.vision.ai   \
       --name vmx-environment        \
       --rm                          \
       visionai/vmx-environment /bin/bash -c "/vmx/middle/vmx | tee /vmx/middle/vmx_log" 2> /dev/null
