@@ -1,8 +1,13 @@
 #!/bin/sh 
 #
-# Script to download all models from models.vision.ai which we might
-# not already have present in the local model store. The model data is
-# transferred into the local /incoming folder.
+# Script to download all models from models.vision.ai which are not
+# presen tin the local model store. The model data is transferred into
+# the /incoming folder, and must be imported into VMX using
+# ./import_incoming.sh.
+#
+# Example:
+#   ./download_a.sh
+#   ./import_incoming.sh
 #
 # Copyright vision.ai 2015
 
@@ -13,7 +18,7 @@ echo "This script will download all new models from models.vision.ai"
 LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
 REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
 for UUID in $REMOTE_UUIDS; do
-    if [ ! -n `echo $LOCAL_UUIDS | grep $UUID` ]; then
+    if [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
 	EXTRA="does not exist, so downloading"
 	echo $UUID $EXTRA
 	mkdir /incoming/$UUID/
@@ -30,7 +35,5 @@ for UUID in $REMOTE_UUIDS; do
     else
 	EXTRA="already exists"
 	echo $UUID $EXTRA
-    fi
-    
+    fi    
 done
-
