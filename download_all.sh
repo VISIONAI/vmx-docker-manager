@@ -13,7 +13,7 @@ echo "This script will download all new models from models.vision.ai"
 LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
 REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
 for UUID in $REMOTE_UUIDS; do
-    if [ ! -n `echo $LOCAL_UUIDS | grep $UUID` ]; then
+    if [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
 	EXTRA="does not exist, so downloading"
 	echo $UUID $EXTRA
 	mkdir /incoming/$UUID/
