@@ -3,7 +3,7 @@
 # Script to download all models from models.vision.ai which are not
 # present in the local model store. The model data is transferred into
 # the /incoming folder, and must be imported into VMX using
-# ./import_incoming.sh.
+# ./import_incoming.sh as the second step.
 #
 # Example:
 #   ./download_models.sh
@@ -21,10 +21,11 @@ REMOTE_URL="https://models.vision.ai"
 
 #Change the local URL if running VMX on another port
 #LOCAL_URL="http://localhost:3000"
-#LOCAL_URL="http://localhost"
-LOCAL_URL="https://vmx-docker-test.vision.ai"
+LOCAL_URL="http://localhost"
 
-echo "This script will download all new models from" $REMOTE_URL "into" $LOCAL_URL
+echo "This script will download all new VMX models."
+echo "REMOTE_URL:" $REMOTE_URL 
+echo "LOCAL_URL: " $LOCAL_URL
 
 #Make sure we have jq
 if [ ! -e `which jq1` ]; then
@@ -35,7 +36,7 @@ if [ ! -e `which jq1` ]; then
 fi
 
 #Make sure LOCAL_URL is valid
-if [ ! -n "`curl -s ${LOCAL_URL}/model | jq -r '.data'`" ]; then
+if [ ! -n "`curl -s ${LOCAL_URL}/model | jq -r '.data' 2>/dev/null`" ]; then
     echo "Problem communicating with LOCAL_URL:" $LOCAL_URL
     echo "Exiting"
     exit
