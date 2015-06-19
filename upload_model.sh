@@ -1,18 +1,17 @@
 #!/bin/sh
 #
-# Admin tool to upload local models from a Mac VMX node into
-# models.vision.ai. Requires administrator priviledges on
+# Admin tool to upload local models from a VMX node into
+# models.vision.ai. Requires administrator priviledges (SSH key) on
 # models.vision.ai.
 # 
 # Copyright vision.ai 2015
 
-VMX_LOCAL="http://localhost:3000"
-VMX_SSH="root@45.63.8.216"
-VMX_REMOTE="http://45.63.8.216:3000"
+VMX_LOCAL="http://cloud6.vision.ai"
+
+VMX_SSH="root@models.vision.ai"
+VMX_REMOTE="https://models.vision.ai"
 VMX_REMOTE_DIR="/incoming"
 
-#The Models Directory contains the saved models
-MODELS_DIRECTORY=`pwd`/assets/models
 NAME=$1
 
 #make sure local endpoint works
@@ -24,7 +23,7 @@ fi
 
 #Make sure the remote endpoint is responsing to REST API requests
 HAS_MODELS=`curl -s $VMX_REMOTE/model | jq -r '.data[]'`
-if [ "$HAS_MODELS" == "" ]; then
+if [ "$HAS_MODELS" = "" ]; then
     echo "Remote endpoint $VMX_REMOTE is not listing models, exiting"
     exit
 fi
@@ -38,18 +37,16 @@ if [ "$#" -ne 1 ]; then
   exit
 fi
 
-
-
-
 HI=`ssh -o PreferredAuthentications=publickey $VMX_SSH "echo hi" 2>/dev/null`
-if [ "$HI" == "" ]; then
+if [ "$HI" = "" ]; then
     echo "Improper credentials for talking to $VMX_REMOTE"
+    echo "Remember to log-in with: ssh-add && ssh -A this.box.ip"
     exit
 fi
 
+
 #jump into local directory
 cd `dirname $0`
-
 
 #Get the UUID for the desired model
 UUID=`curl -s $VMX_LOCAL/model | jq -r '.data[] | select(.name=="'$NAME'") .uuid'`
@@ -73,7 +70,16 @@ echo UUID of object $NAME is $UUID
 
 echo "Preparing tarball for copy"
 TARBALL=/tmp/$UUID.tar
-cd $MODELS_DIRECTORY
+cd /tmp/
+mkdir $UUID
+
+#use curl to pull down models
+curl -o $UUID/image.jpg $VMX_LOCAL/models/$UUID/image.jpg
+curl -o $UUID/model.json $VMX_LOCAL/models/$UUID/model.json
+curl -o $UUID/model.data $VMX_LOCAL/models/$UUID/model.data
+curl -o $UUID/data_set.json $VMX_LOCAL/models/$UUID/data_set.json
+curl -o $UUID/compiled.data $VMX_LOCAL/models/$UUID/compiled.data
+
 tar cf $TARBALL $UUID
 cd - > /dev/null 2>&1
 gzip $TARBALL
@@ -85,10 +91,6 @@ scp $TARBALL $VMX_SSH:$VMX_REMOTE_DIR
 
 echo "Importing into remote container"
 ssh $VMX_SSH "~/vmx-docker-manager/import_models.sh"
-
-#They are already cleared after the import
-#echo "Clearing tarballs on remote"
-#ssh $VMX_SSH "rm /${VMX_REMOTE_DIR}/*.gz"
 
 echo "Clearing tarball on local"
 rm $TARBALL
