@@ -45,6 +45,7 @@ usage () {
   echo "    update TAG: Update your vmx (will stop vmx first)"
   echo "    backup:     Backup your vmx data (models, session logs, config file)"
   echo "    restore BACKUP: Restore models/logs/config from folder BACKUP"
+  echo "    start_process PORT: [Advanced Usage] Start a single VMXserver process on localhost:PORT"
   echo " "
   echo "Examples:"
   echo " - Run vmx on port 3000"
@@ -179,6 +180,45 @@ start_vmx () {
   fi
 }
 
+start_vmx_process () {
+  RUNNING=$(docker ps | grep 'vmx-environment' | wc -l)
+  if [ "$RUNNING" -ne "1" ]; then
+    echo "vmx starting with port $VMXHOSTPORT"
+    echo "--------------------------------------"
+    echo "visit http://localhost:$VMXHOSTPORT   "
+    echo 
+    echo "Ctrl-c to detach terminal from the log"
+    echo "./vmx stop to stop the vmx daemon"
+    echo 
+    boot2docker_extra
+    docker run -t                   \
+      --volumes-from vmx-mcr        \
+      --volumes-from vmx-userdata   \
+      --volumes-from vmx-middle     \
+      --volumes-from vmx-server     \
+      --volumes-from vmx-appbuilder \
+      -p $VMXHOSTPORT:3000          \
+      --name vmx-environment        \
+      --rm                          \
+      visionai/vmx-environment /bin/bash -c "/vmx/build/VMXserver /vmx/ session_id none :3000" 2> /dev/null
+
+    #if it fails for some reason, clean up our mess pass the error code
+    prev=$?
+    if [ "$prev" -eq "1" ]; then
+      echo "Failed to start vmx_process. Try \"./vmx init\" first"
+      docker rm vmx-environment 2> /dev/null
+      exit $prev
+    else
+      echo "Successfully started vmx_process"
+    fi
+  else
+    echo "Already running vmx-environment"
+    echo "You must first run ./vmx stop"
+    exit 1
+  fi
+}
+
+
 stop_vmx () {
   echo 'Stopping vmx'
   docker stop vmx-environment 2> /dev/null
@@ -281,6 +321,21 @@ case "$cmd" in
     start_vmx
     exit 0
     ;;
+
+  start_process)
+    if [ $# -lt 2 ]; then
+      echo "Must supply port"
+      usage
+    fi    
+    if [ ! -e ".vmx-init" ]; then
+      echo "Downloading dependencies (this may take a while)"
+      init
+    fi
+    export VMXHOSTPORT=$2
+    start_vmx_process
+    exit 0
+    ;;
+
 
   stop)
     stop_vmx
