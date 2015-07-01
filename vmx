@@ -191,7 +191,7 @@ start_vmx_process () {
     echo "./vmx stop to stop the vmx daemon"
     echo 
     boot2docker_extra
-    docker run -t                   \
+    docker run                      \
       --volumes-from vmx-mcr        \
       --volumes-from vmx-userdata   \
       --volumes-from vmx-middle     \
@@ -200,7 +200,7 @@ start_vmx_process () {
       -p $VMXHOSTPORT:3000          \
       --name vmx-environment        \
       --rm                          \
-      visionai/vmx-environment /bin/bash -c "/vmx/build/VMXserver /vmx/ session_id none :3000" 2> /dev/null
+      visionai/vmx-environment /bin/bash -c "/vmx/build/VMXserver /vmx/ session_id none :3000 | tee /vmx/log"
 
     #if it fails for some reason, clean up our mess pass the error code
     prev=$?
