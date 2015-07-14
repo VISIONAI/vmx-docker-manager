@@ -89,7 +89,7 @@ boot2docker_extra() {
 }
 
 check_perm() {
-  docker run -rm busybox echo >/dev/null 2>&1
+  docker run --rm busybox echo >/dev/null 2>&1
   NON_ROOT_RUN_DOCKER_EXIT_CODE="$?"
   if [ $NON_ROOT_RUN_DOCKER_EXIT_CODE -eq 1 ] ; then
     echo "Permissions failed.."
