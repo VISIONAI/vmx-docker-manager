@@ -39,6 +39,10 @@ UPLOAD_URL="https://models.vision.ai"
 # The directory on the upload server where models get imported
 UPLOAD_DIR="/incoming"
 
+# If non-empty, then LOCAL_URL is a Mac
+IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
+MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+
 usage () {
   echo "VMX Model Manager by vision.ai"
   echo "Version: " `git describe --tags --dirty 2>/dev/null || echo no-git`
@@ -160,12 +164,19 @@ import() {
     cd - 2> /dev/null
     for f in $FILES; do
 	echo "Importing: " $f
-	docker run --rm --name vmx-export --volumes-from vmx-userdata:rw \
-	    -v $DOWNLOAD_DIRECTORY/$f:/incoming/$f ubuntu /bin/bash \
-	    -c "cat /incoming/*tar.gz | tar -xzvf - -i -C /vmx/models" \
-	    && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
-	    && rm $DOWNLOAD_DIRECTORY/$f \
-	    || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
+        if [ "$IS_MAC" ]; then
+            tar -C $MAC_MODELS -xf $DOWNLOAD_DIRECTORY/$f \
+	        && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
+	        && rm $DOWNLOAD_DIRECTORY/$f \
+	        || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
+        else
+	    docker run --rm --name vmx-export --volumes-from vmx-userdata:rw \
+	        -v $DOWNLOAD_DIRECTORY/$f:/incoming/$f ubuntu /bin/bash \
+	        -c "cat /incoming/*tar.gz | tar -xzvf - -i -C /vmx/models" \
+	        && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
+	        && rm $DOWNLOAD_DIRECTORY/$f \
+	        || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
+        fi
     done
 }
 
