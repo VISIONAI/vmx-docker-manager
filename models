@@ -40,7 +40,13 @@ UPLOAD_URL="https://models.vision.ai"
 UPLOAD_DIR="/incoming"
 
 # If non-empty, then LOCAL_URL is a Mac
-IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
+if [ `uname` = "Linux" ]; then
+    IS_MAC=""
+    MAC_MODELS="/tmp/invalid"
+else
+    IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
+    MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+fi
 MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
 
 usage () {
@@ -145,7 +151,7 @@ download() {
     done
 
     echo "Finished downloading"
-    echo "Next step: Use ./import_models.sh to import into VMX container"
+    echo "Next step: Use \"./models import\" to import into VMX container"
     
 }
 
@@ -172,7 +178,7 @@ import() {
         else
 	    docker run --rm --name vmx-export --volumes-from vmx-userdata:rw \
 	        -v $DOWNLOAD_DIRECTORY/$f:/incoming/$f ubuntu /bin/bash \
-	        -c "cat /incoming/*tar.gz | tar -xzvf - -i -C /vmx/models" \
+	        -c "tar -C /vmx/models -xf /incoming/$f" \
 	        && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
 	        && rm $DOWNLOAD_DIRECTORY/$f \
 	        || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
