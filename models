@@ -39,15 +39,15 @@ UPLOAD_URL="https://models.vision.ai"
 # The directory on the upload server where models get imported
 UPLOAD_DIR="/incoming"
 
+#The default location of models on a native Mac install (used for import)
+MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+
 # If non-empty, then LOCAL_URL is a Mac
 if [ `uname` = "Linux" ]; then
     IS_MAC=""
-    MAC_MODELS="/tmp/invalid"
 else
     IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
-    MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
 fi
-MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
 
 usage () {
   echo "VMX Model Manager by vision.ai"
@@ -57,13 +57,16 @@ usage () {
   echo "Usage: models.sh COMMAND [OPTIONS]"
   echo 
   echo "Commands:"
-  echo "    download: Download models from remote server models.vision.ai into incoming folder"
+  echo "    download [a] [b] [c]: Download models from remote server models.vision.ai into incoming folder"
   echo "    import:   Import models from incoming folder into VMX container"
   echo "    upload model_name:   Upload models to a remote location via SSH"
   echo " "
   echo "Examples:"
-  echo " - Download publicly available models from models.vision.ai"
-  echo "    $  ./models download"
+  echo " - Download all publicly available models from models.vision.ai"
+  echo "    $  ./models download -all"
+  echo " "
+  echo " - Download a,b,c from models.vision.ai"
+  echo "    $  ./models download a b c"
   echo " "
   echo " - Import downloaded models into local VMX"
   echo "    $  ./models import"
@@ -100,6 +103,7 @@ check_dependencies() {
     fi
 }
 
+# The function to download models
 download() {
     if [ "`curl -s ${REMOTE_URL}/model | jq -r '.data' 2> /dev/null`" = "" ]; then
 	echo "Problem listing remote models at REMOTE_URL=${REMOTE_URL}"
@@ -118,11 +122,21 @@ download() {
 	echo "Make the directory or change DOWNLOAD_DIRECTORY"
 	exit
     fi
-    
-    echo "This script will download all models from" $REMOTE_URL "which do not exist in " $LOCAL_URL "into" $DOWNLOAD_DIRECTORY
+
     LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
-    REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
-    
+
+    if [ "$MODEL_NAME" = "-all" ]; then
+        echo "This script will download all models from" $REMOTE_URL "which do not exist in" $LOCAL_URL "into" $DOWNLOAD_DIRECTORY
+        REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
+    else
+        REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
+    fi
+
+    if [[ ! "$REMOTE_UUIDS" ]]; then
+        echo "No remote uuids matching" $MODEL_NAME
+        return
+    fi
+
     for UUID in $REMOTE_UUIDS; do
 	FINAL_TARBALL=$DOWNLOAD_DIRECTORY/${UUID}.tar.gz
 	echo "----------"
@@ -131,12 +145,15 @@ download() {
 	elif [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
 	    echo $UUID "not found in" $LOCAL_URL "so downloading"
 	    mkdir $DOWNLOAD_DIRECTORY/$UUID/ 2> /dev/null
-	    curl -s -o $DOWNLOAD_DIRECTORY/$UUID/image.jpg $REMOTE_URL/models/$UUID/image.jpg
-	    curl -s -o $DOWNLOAD_DIRECTORY/$UUID/model.json $REMOTE_URL/models/$UUID/model.json
-	    curl -s -o $DOWNLOAD_DIRECTORY/$UUID/compiled.data $REMOTE_URL/models/$UUID/compiled.data
-	    curl -s -o $DOWNLOAD_DIRECTORY/$UUID/data_set.json $REMOTE_URL/models/$UUID/data_set.json
-	    curl -s -o $DOWNLOAD_DIRECTORY/$UUID/model.data $REMOTE_URL/models/$UUID/model.data
-	    
+            cd $DOWNLOAD_DIRECTORY/$UUID
+
+	    curl -# -C - -O $REMOTE_URL/models/$UUID/image.jpg \
+                -O -C - $REMOTE_URL/models/$UUID/model.json \
+                -O -C - $REMOTE_URL/models/$UUID/compiled.data \
+                -O -C - $REMOTE_URL/models/$UUID/data_set.json \
+                -O -C - $REMOTE_URL/models/$UUID/model.data
+	    cd - 2> /dev/null
+
 	    #Now we make a tarball from the downloaded files
 	    echo "Making tarball" $FINAL_TARBALL
 	    cd $DOWNLOAD_DIRECTORY/
@@ -287,7 +304,18 @@ cmd=$1
 
 case "$cmd" in
     download)
-	download
+        [ $# -lt 2 ] && {
+            usage
+        }
+
+
+        while (( "$#" )); do
+	    MODEL_NAME=$2
+            if [[  "$MODEL_NAME" ]]; then
+	        download
+            fi
+            shift
+        done
 	exit 0
 	;;
 
