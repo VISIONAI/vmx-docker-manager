@@ -276,20 +276,24 @@ upload() {
     
     echo UUID of object $MODEL_NAME is $UUID
     
-    echo "Preparing tarball for copy"
-    TARBALL=/tmp/$UUID.tar
-    cd /tmp/
-    mkdir $UUID
+    TMPDIR=/tmp/vmx_upload_temp/
     
-    #use curl to pull down models
-    curl -o $UUID/image.jpg $LOCAL_URL/models/$UUID/image.jpg
-    curl -o $UUID/model.json $LOCAL_URL/models/$UUID/model.json
-    curl -o $UUID/model.data $LOCAL_URL/models/$UUID/model.data
-    curl -o $UUID/data_set.json $LOCAL_URL/models/$UUID/data_set.json
-    curl -o $UUID/compiled.data $LOCAL_URL/models/$UUID/compiled.data
-    
+    TARBALL=${TMPDIR}/$UUID.tar
+    mkdir -p $TMPDIR/$UUID
+    OLDCWD=`pwd`
+    cd $TMPDIR/$UUID
+
+    #use curl to pull down models    
+    curl -# -C - -O $LOCAL_URL/models/$UUID/image.jpg \
+        -O -C - $LOCAL_URL/models/$UUID/model.json \
+        -O -C - $LOCAL_URL/models/$UUID/compiled.data \
+        -O -C - $LOCAL_URL/models/$UUID/data_set.json \
+        -O -C - $LOCAL_URL/models/$UUID/model.data
+    cd ..
+
+    echo "Creating tarball"
     tar cf $TARBALL $UUID
-    cd - > /dev/null 2>&1
+    cd ${OLDCWD} > /dev/null 2>&1
     gzip $TARBALL
     TARBALL=${TARBALL}.gz
     
@@ -318,7 +322,10 @@ cmd=$1
 case "$cmd" in
     download)
         [ $# -lt 2 ] && {
-            usage
+	    echo "Usage: $0 download model_name1 [model_name2] [model_name3]" >&2
+	    VALID_NAMES=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .name'`
+	    echo "Valid names are:" $VALID_NAMES
+	    exit
         }
 
         while [ "$#" -gt 0 ]; do
@@ -338,8 +345,14 @@ case "$cmd" in
         ;;
 
     upload)
-        MODEL_NAME=$2
-        upload
+        while [ "$#" -gt 0 ]; do
+            MODEL_NAME=$2
+            if [ ! -z "$MODEL_NAME" ]; then
+                upload
+            fi
+            shift
+        done
+
         exit 0
         ;;
 
