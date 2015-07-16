@@ -95,3 +95,38 @@ The Dockerfiles that build the referenced Docker images can be found here:
 - https://github.com/VISIONAI/docker-vmx-middle
 - https://github.com/VISIONAI/docker-vmx-server
 - https://github.com/VISIONAI/docker-vmx-appbuilder
+
+## Downloading and sharing VMX models
+
+If you're bold, you should just give it a shot!
+
+```
+./models
+```
+
+## Extra: Running VMX over HTTPS
+
+If you are a **vision.ai administrator** and you want to run VMX on a vision.ai
+subdomain such as `megavmx.vision.ai`, you'll need to checkout the
+`vision.ai` branch of the vmx-docker-manager
+
+```
+cd ~
+git clone https://github.com/VISIONAI/vmx-docker-manager.git
+cd vmx-docker-manager
+git checkout vision.ai
+./vmx start 3000
+```
+
+What the vision.ai branch does is the following: make sure that VMX is
+only accessible from 127.0.0.1, and set the VIRTUAL_HOST environment
+variable.
+
+You should also use the private nginx-ssl-proxy script as follows:
+
+```
+cd ~
+git clone https://github.com/VISIONAI/nginx-ssl-proxy
+cd nginx-ssl-proxy
+./proxy.sh
+```
