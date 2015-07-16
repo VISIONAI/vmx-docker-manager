@@ -240,10 +240,12 @@ import() {
     done
 }
 
+#upload models
 upload() {
 
+    check_local_url
     check_upload_url
-    check_local_url    
+    check_upload_ssh
     
     #Make sure we have two command line arguments
     if [ "$MODEL_NAME" = "" ]; then
@@ -254,7 +256,7 @@ upload() {
         exit
     fi
     
-    check_upload_ssh
+
     
     #Get the UUID for the desired model
     UUID=`curl -s $LOCAL_URL/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
