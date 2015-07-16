@@ -1,53 +1,7 @@
 #!/bin/sh
 # VMX Model Manager
 #
-# download: Script to download all VMX models from a remote VMX server such as
-# models.vision.ai into a local VMX server such as one running on
-# localhost:3000. 
-#
-# import: Script to import all models (represented as tarballs) from the
-# DOWNLOAD_DIRECTORY folder into the vmx model container. This script
-# will process the tarballs one by one, deleting the tarball after a
-# successful import.
-#
-# upload: Admin tool to upload local models from a VMX node into
-# models.vision.ai. Requires administrator priviledges (SSH key) on
-# models.vision.ai.
-# 
 # Copyright vision.ai 2015
-
-#always run in current directory
-cd `dirname $0`
-
-#Change the remote URL if you want to download models from another VMX endpoint
-#REMOTE_URL="http://192.168.1.103:3000"
-REMOTE_URL="https://models.vision.ai"
-
-#Change the local URL if VMX is running on another port or using HTTPS
-#LOCAL_URL="http://localhost:3000"
-LOCAL_URL="http://localhost:3000"
-
-#The directory where we make VMX model tarballs after downloading
-DOWNLOAD_DIRECTORY=`pwd`'/incoming'
-
-#The user/ip of the server we will try to upload to
-UPLOAD_SSH="root@test.vision.ai"
-
-#The URL to check if the models were imported or not
-UPLOAD_URL="https://test.vision.ai"
-
-# The directory on the upload server where models get imported
-UPLOAD_DIR="~/vmx-docker-manager/incoming"
-
-#The default location of models on a native Mac install (used for import)
-MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
-
-# If non-empty, then LOCAL_URL is a Mac
-if [ `uname` = "Linux" ]; then
-    IS_MAC=""
-else
-    IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
-fi
 
 usage () {
   echo "VMX Model Manager by vision.ai"
@@ -65,8 +19,8 @@ usage () {
   echo " - Download all publicly available models from models.vision.ai"
   echo "    $  ./models download -all"
   echo " "
-  echo " - Download a,b,c from models.vision.ai"
-  echo "    $  ./models download a b c"
+  echo " - Download face, dog, eyes from models.vision.ai"
+  echo "    $  ./models download face dog eyes"
   echo " "
   echo " - Import downloaded models into local VMX"
   echo "    $  ./models import"
@@ -74,11 +28,51 @@ usage () {
   echo " - Upload a model called gesture-pack-12"
   echo "    $  ./models upload gesture-pack-12"
   echo " "
+  echo " - Upload two models gesture-pack-12 and gesture-pack-14"
+  echo "    $  ./models upload gesture-pack-12 gesture-pack-14"
+  echo " "
+  echo " - Upload all models"
+  echo "    $  ./models upload -all"
+  echo " "
   echo " - Update the vmx-docker-manager"
   echo "    $  git pull"
-
   exit 1
 }
+
+
+#always run in current directory
+cd `dirname $0`
+
+#Change the remote URL if you want to download models from another VMX endpoint
+#REMOTE_URL="http://192.168.1.103:3000"
+REMOTE_URL="https://models.vision.ai"
+
+#Change the local URL if VMX is running on another port or using HTTPS
+#LOCAL_URL="http://localhost:3000"
+LOCAL_URL="http://localhost:3000"
+
+#The directory where we make VMX model tarballs after downloading
+DOWNLOAD_DIRECTORY=`pwd`'/incoming'
+
+#The user/ip of the server we will try to upload to
+UPLOAD_SSH="root@models.vision.ai"
+
+#The URL to check if the models were imported or not
+UPLOAD_URL="https://models.vision.ai"
+
+# The directory on the upload server where models get imported
+UPLOAD_DIR="~/vmx-docker-manager/incoming"
+
+#The default location of models on a native Mac install (used for import)
+MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+
+# If non-empty, then LOCAL_URL is a Mac
+if [ `uname` = "Linux" ]; then
+    IS_MAC=""
+else
+    IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
+fi
+
 
 check_dependencies() {
     # Dependencies: jq, curl, gzip, tar
@@ -150,11 +144,7 @@ download() {
     check_remote_url
     check_local_url
     
-    if [ ! -e $DOWNLOAD_DIRECTORY ]; then
-        echo "Directory" $DOWNLOAD_DIRECTORY "does not exist"
-        echo "Make the directory or change DOWNLOAD_DIRECTORY"
-        exit
-    fi
+    mkdir -p $DOWNLOAD_DIRECTORY
 
     LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
 
@@ -246,25 +236,19 @@ upload() {
     check_local_url
     check_upload_url
     check_upload_ssh
-    
-    #Make sure we have two command line arguments
-    if [ "$MODEL_NAME" = "" ]; then
-        echo "Usage: $0 upload model_name" >&2
         
-        VALID_NAMES=`curl -s $LOCAL_URL/model | jq -r '.data[] .name'`
-        echo "Valid names are:" $VALID_NAMES
-        exit
-    fi
-    
-
-    
     #Get the UUID for the desired model
     UUID=`curl -s $LOCAL_URL/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
-    
+
+    #If we didn't get a UUID from a model.name, then maybe a UUID was specified
+    if [ ! -n "$UUID" ]; then
+	UUID=`curl -s $LOCAL_URL/model | jq -r '.data[] | select(.uuid=="'$MODEL_NAME'") .uuid'`    
+    fi
+
     if [ ! -n "$UUID" ]; then
         echo "Error: Cannot find model" $MODEL_NAME "in local models" $LOCAL_URL
         echo "Not copying"
-        exit 1
+	return
     fi
     
     #check if that UUID is present on the remote server
@@ -273,17 +257,17 @@ upload() {
     if [ -n "$IS_PRESENT" ]; then
         echo "Warning: already found model" $MODEL_NAME "UUID" $UUID "on remote server" $UPLOAD_URL
         echo "Not copying"
-        exit
+        return
     fi
     
     echo UUID of object $MODEL_NAME is $UUID
     
-    TMPDIR=/tmp/vmx_upload_temp/
+    TMP_UPLOAD_DIR=/tmp/vmx_upload_temp/
     
-    TARBALL=${TMPDIR}/$UUID.tar
-    mkdir -p $TMPDIR/$UUID
+    TARBALL=${TMP_UPLOAD_DIR}/$UUID.tar
+    mkdir -p ${TMP_UPLOAD_DIR}/$UUID
     OLDCWD=`pwd`
-    cd $TMPDIR/$UUID
+    cd ${TMP_UPLOAD_DIR}/$UUID
 
     #use curl to pull down models    
     curl -# -C - -O $LOCAL_URL/models/$UUID/image.jpg \
@@ -347,6 +331,21 @@ case "$cmd" in
         ;;
 
     upload)
+        [ $# -lt 2 ] && {
+	    echo "Usage: $0 upload model_name1 [model_name2] [model_name3]" >&2
+	    VALID_NAMES=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .name'`
+	    echo "Valid names are:" $VALID_NAMES
+	    exit
+        }
+	
+	#allow ./models upload -all
+	[ $# -eq 2 ] && [ "$2" = "-all" ] && {
+	    echo "About to upload all models"
+	    VALID_NAMES=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .name'`
+	    $0 upload $VALID_NAMES
+	    exit
+	}
+
         while [ "$#" -gt 0 ]; do
             MODEL_NAME=$2
             if [ ! -z "$MODEL_NAME" ]; then
