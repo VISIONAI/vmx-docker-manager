@@ -83,44 +83,44 @@ usage () {
 check_dependencies() {
     # Dependencies: jq, curl, gzip, tar
     if [ "`which jq`" = "" ]; then
-	echo "Dependency jq is missing, exiting"
-	exit 1
+        echo "Dependency jq is missing, exiting"
+        exit 1
     fi
 
     if [ "`which curl`" = "" ]; then
-	echo "Dependency curl is missing, exiting"
-	exit 1
+        echo "Dependency curl is missing, exiting"
+        exit 1
     fi
 
     if [ "`which gzip`" = "" ]; then
-	echo "Dependency gzip is missing, exiting"
-	exit 1
+        echo "Dependency gzip is missing, exiting"
+        exit 1
     fi
 
     if [ "`which tar`" = "" ]; then
-	echo "Dependency tar is missing, exiting"
-	exit 1
+        echo "Dependency tar is missing, exiting"
+        exit 1
     fi
 }
 
 # The function to download models
 download() {
     if [ "`curl -s ${REMOTE_URL}/model | jq -r '.data' 2> /dev/null`" = "" ]; then
-	echo "Problem listing remote models at REMOTE_URL=${REMOTE_URL}"
-	echo "Please change REMOTE_URL"
-	exit
+        echo "Problem listing remote models at REMOTE_URL=${REMOTE_URL}"
+        echo "Please change REMOTE_URL"
+        exit
     fi
     
     if [ "`curl -s ${LOCAL_URL}/model | jq -r '.data' 2> /dev/null`" = "" ]; then
-	echo "Problem listing local models at LOCAL_URL=${LOCAL_URL}"
-	echo "Please change LOCAL_URL"
-	exit
+        echo "Problem listing local models at LOCAL_URL=${LOCAL_URL}"
+        echo "Please change LOCAL_URL"
+        exit
     fi
     
     if [ ! -e $DOWNLOAD_DIRECTORY ]; then
-	echo "Directory" $DOWNLOAD_DIRECTORY "does not exist"
-	echo "Make the directory or change DOWNLOAD_DIRECTORY"
-	exit
+        echo "Directory" $DOWNLOAD_DIRECTORY "does not exist"
+        echo "Make the directory or change DOWNLOAD_DIRECTORY"
+        exit
     fi
 
     LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
@@ -132,73 +132,70 @@ download() {
         REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
     fi
 
-    if [[ ! "$REMOTE_UUIDS" ]]; then
+    if [ -z "$REMOTE_UUIDS" ]; then
+        echo "----------"
         echo "No remote uuids matching" $MODEL_NAME
         return
     fi
 
     for UUID in $REMOTE_UUIDS; do
-	FINAL_TARBALL=$DOWNLOAD_DIRECTORY/${UUID}.tar.gz
-	echo "----------"
-	if [ -e $FINAL_TARBALL ]; then
-	    echo $FINAL_TARBALL "already exists, skipping download"
-	elif [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
-	    echo $UUID "not found in" $LOCAL_URL "so downloading"
-	    mkdir $DOWNLOAD_DIRECTORY/$UUID/ 2> /dev/null
+        FINAL_TARBALL=$DOWNLOAD_DIRECTORY/${UUID}.tar.gz
+        echo "----------"
+        if [ -e $FINAL_TARBALL ]; then
+            echo $FINAL_TARBALL "already exists, skipping download"
+        elif [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
+            echo $UUID "not found in" $LOCAL_URL "so downloading"
+            mkdir $DOWNLOAD_DIRECTORY/$UUID/ 2> /dev/null
             cd $DOWNLOAD_DIRECTORY/$UUID
 
-	    curl -# -C - -O $REMOTE_URL/models/$UUID/image.jpg \
+            curl -# -C - -O $REMOTE_URL/models/$UUID/image.jpg \
                 -O -C - $REMOTE_URL/models/$UUID/model.json \
                 -O -C - $REMOTE_URL/models/$UUID/compiled.data \
                 -O -C - $REMOTE_URL/models/$UUID/data_set.json \
                 -O -C - $REMOTE_URL/models/$UUID/model.data
-	    cd - 2> /dev/null
+            cd - 2> /dev/null
 
-	    #Now we make a tarball from the downloaded files
-	    echo "Making tarball" $FINAL_TARBALL
-	    cd $DOWNLOAD_DIRECTORY/
-	    tar cfz $UUID.tar.gz $UUID
-	    
-	    #And cleanup the directory
-	    rm -rf $UUID
-	    cd - > /dev/null 2>&1
-	else
-	    echo $UUID "already exists inside" $LOCAL_URL
-	fi    
-    done
-
-    echo "Finished downloading"
-    echo "Next step: Use \"./models import\" to import into VMX container"
-    
+            #Now we make a tarball from the downloaded files
+            echo "Making tarball" $FINAL_TARBALL
+            cd $DOWNLOAD_DIRECTORY/
+            tar cfz $UUID.tar.gz $UUID
+            
+            #And cleanup the directory
+            rm -rf $UUID
+            cd - > /dev/null 2>&1
+        else
+            echo $UUID "already exists inside" $LOCAL_URL
+        fi    
+    done    
 }
 
 import() {
     NFILES=`ls $DOWNLOAD_DIRECTORY/*.gz 2>/dev/null | wc -l`
     echo "Number of models in" $DOWNLOAD_DIRECTORY "is" $NFILES
     if [ "$NFILES" = "0" ]; then
-	echo "No models to import, exiting"
-	exit
+        echo "No models to import, exiting"
+        exit
     else
-	echo "Importing $NFILES models"
+        echo "Importing $NFILES models"
     fi
     
     cd $DOWNLOAD_DIRECTORY
     FILES=`find . -name "*.tar.gz"`
     cd - 2> /dev/null
     for f in $FILES; do
-	echo "Importing: " $f
+        echo "Importing: " $f
         if [ "$IS_MAC" ]; then
             tar -C $MAC_MODELS -xf $DOWNLOAD_DIRECTORY/$f \
-	        && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
-	        && rm $DOWNLOAD_DIRECTORY/$f \
-	        || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
+                && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
+                && rm $DOWNLOAD_DIRECTORY/$f \
+                || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
         else
-	    docker run --rm --name vmx-export --volumes-from vmx-userdata:rw \
-	        -v $DOWNLOAD_DIRECTORY/$f:/incoming/$f ubuntu /bin/bash \
-	        -c "tar -C /vmx/models -xf /incoming/$f" \
-	        && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
-	        && rm $DOWNLOAD_DIRECTORY/$f \
-	        || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
+            docker run --rm --name vmx-export --volumes-from vmx-userdata:rw \
+                -v $DOWNLOAD_DIRECTORY/$f:/incoming/$f ubuntu /bin/bash \
+                -c "tar -C /vmx/models -xf /incoming/$f" \
+                && echo "Cleaning up" $DOWNLOAD_DIRECTORY/$f \
+                && rm $DOWNLOAD_DIRECTORY/$f \
+                || echo "Problem with" $DOWNLOAD_DIRECTORY/$f
         fi
     done
 }
@@ -209,33 +206,33 @@ upload() {
     
     #make sure local endpoint works
     if [ "`curl -s $LOCAL_URL`" = "" ]; then
-	echo "Cannot communicate with local VMX at $LOCAL_URL"
-	echo "Make sure VMX is running"
-	exit
+        echo "Cannot communicate with local VMX at $LOCAL_URL"
+        echo "Make sure VMX is running"
+        exit
     fi
     
     #Make sure the remote endpoint is responsing to REST API requests
     HAS_MODELS=`curl -s $UPLOAD_URL/model | jq -r '.data[]'`
     if [ "$HAS_MODELS" = "" ]; then
-	echo "Remote endpoint $UPLOAD_URL is not listing models, exiting"
-	exit
+        echo "Remote endpoint $UPLOAD_URL is not listing models, exiting"
+        exit
     fi
     
     #Make sure we have two command line arguments
 
     if [ "$MODEL_NAME" = "" ]; then
-	echo "Usage: $0 upload model_name" >&2
-	
-	VALID_NAMES=`curl -s $LOCAL_URL/model | jq -r '.data[] .name'`
-	echo "Valid names are:" $VALID_NAMES
-	exit
+        echo "Usage: $0 upload model_name" >&2
+        
+        VALID_NAMES=`curl -s $LOCAL_URL/model | jq -r '.data[] .name'`
+        echo "Valid names are:" $VALID_NAMES
+        exit
     fi
     
     HI=`ssh -o PreferredAuthentications=publickey $UPLOAD_SSH "echo hi" 2>/dev/null`
     if [ "$HI" = "" ]; then
-	echo "Improper credentials for talking to $UPLOAD_URL"
-	echo "Remember to log-in with: ssh-add && ssh -A this.box.ip"
-	exit
+        echo "Improper credentials for talking to $UPLOAD_URL"
+        echo "Remember to log-in with: ssh-add && ssh -A this.box.ip"
+        exit
     fi
     
     
@@ -246,18 +243,18 @@ upload() {
     UUID=`curl -s $LOCAL_URL/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
     
     if [ ! -n "$UUID" ]; then
-	echo "Error: Cannot find model" $MODEL_NAME "in local models" $LOCAL_URL
-	echo "Not copying"
-	exit 1
+        echo "Error: Cannot find model" $MODEL_NAME "in local models" $LOCAL_URL
+        echo "Not copying"
+        exit 1
     fi
     
     #check if that UUID is present on the remote server
     IS_PRESENT=`curl -s $UPLOAD_URL/model | jq -r '.data[] | select(.uuid=="'$UUID'") .name'`
     
     if [ -n "$IS_PRESENT" ]; then
-	echo "Warning: already found model" $MODEL_NAME "UUID" $UUID "on remote server" $UPLOAD_URL
-	echo "Not copying"
-	exit
+        echo "Warning: already found model" $MODEL_NAME "UUID" $UUID "on remote server" $UPLOAD_URL
+        echo "Not copying"
+        exit
     fi
     
     echo UUID of object $MODEL_NAME is $UUID
@@ -308,28 +305,28 @@ case "$cmd" in
             usage
         }
 
-
-        while (( "$#" )); do
-	    MODEL_NAME=$2
-            if [[  "$MODEL_NAME" ]]; then
-	        download
+        while [ "$#" -gt 0 ]; do
+            MODEL_NAME=$2
+            if [ ! -z "$MODEL_NAME" ]; then
+                download
             fi
+
             shift
         done
-	exit 0
-	;;
+        exit 0
+        ;;
 
     import)
-	import
-	exit 0
-	;;
+        import
+        exit 0
+        ;;
 
     upload)
-	MODEL_NAME=$2
-	upload
-	exit 0
-	;;
+        MODEL_NAME=$2
+        upload
+        exit 0
+        ;;
 
     *)
-	usage
+        usage
 esac
