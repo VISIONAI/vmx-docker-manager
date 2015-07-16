@@ -98,10 +98,26 @@ The Dockerfiles that build the referenced Docker images can be found here:
 
 ## Downloading and sharing VMX models
 
-If you're bold, you should just give it a shot!
-
 ```
-./models
+Usage: models.sh COMMAND [OPTIONS]
+
+Commands:
+    download [a] [b] [c]: Download models from remote server models.vision.ai into incoming folder
+    import:   Import models from incoming folder into VMX container
+    upload model_name:   Upload models to a remote location via SSH
+
+Examples:
+ - Download all publicly available models from models.vision.ai
+    $  ./models download -all
+
+ - Download a,b,c from models.vision.ai
+    $  ./models download a b c
+
+ - Import downloaded models into local VMX
+    $  ./models import
+
+ - Upload a model called gesture-pack-12
+    $  ./models upload gesture-pack-12
 ```
 
 ## Extra: Running VMX over HTTPS
