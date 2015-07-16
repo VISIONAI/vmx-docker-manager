@@ -130,6 +130,11 @@ download() {
         REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
     else
         REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
+        
+        #If we didn't find a model.name matching, then maybe the user specified a UUID instead?
+        if [ -z "$REMOTE_UUIDS" ]; then
+            REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] | select(.uuid=="'$MODEL_NAME'") .uuid'`
+        fi
     fi
 
     if [ -z "$REMOTE_UUIDS" ]; then
@@ -153,7 +158,7 @@ download() {
                 -O -C - $REMOTE_URL/models/$UUID/compiled.data \
                 -O -C - $REMOTE_URL/models/$UUID/data_set.json \
                 -O -C - $REMOTE_URL/models/$UUID/model.data
-            cd - 2> /dev/null
+            cd - > /dev/null 2>&1
 
             #Now we make a tarball from the downloaded files
             echo "Making tarball" $FINAL_TARBALL
@@ -181,7 +186,7 @@ import() {
     
     cd $DOWNLOAD_DIRECTORY
     FILES=`find . -name "*.tar.gz"`
-    cd - 2> /dev/null
+    cd - > /dev/null 2>&1
     for f in $FILES; do
         echo "Importing: " $f
         if [ "$IS_MAC" ]; then
@@ -310,9 +315,9 @@ case "$cmd" in
             if [ ! -z "$MODEL_NAME" ]; then
                 download
             fi
-
             shift
         done
+        echo "Done downloading, to import run: ./models import"
         exit 0
         ;;
 
