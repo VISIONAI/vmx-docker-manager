@@ -278,6 +278,9 @@ update_vmx(){
   docker pull visionai/vmx-server$VMXTAG
   docker pull visionai/vmx-appbuilder$VMXTAG
 
+  #Update the environment (even though it rarely changes)
+  docker pull visionai/vmx-environment
+
   docker run --name vmx-middle visionai/vmx-middle$VMXTAG
   A=$?
   docker run --name vmx-server visionai/vmx-server$VMXTAG
