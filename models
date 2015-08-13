@@ -232,7 +232,11 @@ import() {
     if [ "$IS_MAC" ]; then    
         #The default location of models on a native Mac install (used for import)
         #MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
-
+        
+        if [ ! -f config/settings.yml ]; then
+            echo "Cannot find config/settings.yml"
+            exit 1
+        fi
         MAC_MODELS=`cat config/settings.yml | grep "wwwdir:" | head -1 | awk '{print($2)}' | sed 's/"//g'`/models
         echo "MAC_MODELS directory is" $MAC_MODELS
     fi
