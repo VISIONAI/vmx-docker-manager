@@ -3,45 +3,8 @@
 #
 # Copyright vision.ai 2015
 
-usage () {
-  echo "VMX Model Manager by vision.ai"
-  echo "Version: " `git describe --tags --dirty 2>/dev/null || echo no-git`
-  echo "Requires docker >= 1.2; and permissions to run docker"
-  echo "==============================================="
-  echo "Usage: models.sh COMMAND [OPTIONS]"
-  echo 
-  echo "Commands:"
-  echo "    download [a] [b] [c]: Download models from remote server models.vision.ai into incoming folder"
-  echo "    import:   Import models from incoming folder into VMX container"
-  echo "    upload model_name:   Upload models to a remote location via SSH"
-  echo " "
-  echo "Examples:"
-  echo " - Download all publicly available models from models.vision.ai"
-  echo "    $  ./models download -all"
-  echo " "
-  echo " - Download face, dog, eyes from models.vision.ai"
-  echo "    $  ./models download face dog eyes"
-  echo " "
-  echo " - Import downloaded models into local VMX"
-  echo "    $  ./models import"
-  echo " "
-  echo " - Upload a model called gesture-pack-12"
-  echo "    $  ./models upload gesture-pack-12"
-  echo " "
-  echo " - Upload two models gesture-pack-12 and gesture-pack-14"
-  echo "    $  ./models upload gesture-pack-12 gesture-pack-14"
-  echo " "
-  echo " - Upload all models"
-  echo "    $  ./models upload -all"
-  echo " "
-  echo " - Update the vmx-docker-manager"
-  echo "    $  git pull"
-  exit 1
-}
-
-
 #always run in current directory
-cd `dirname $0`
+cd "`dirname "$0"`"
 
 #Change the remote URL if you want to download models from another VMX endpoint
 #REMOTE_URL="http://192.168.1.103:3000"
@@ -61,17 +24,61 @@ UPLOAD_SSH="root@models.vision.ai"
 UPLOAD_URL="https://models.vision.ai"
 
 # The directory on the upload server where models get imported
-UPLOAD_DIR="~/vmx-docker-manager/incoming"
+UPLOAD_DIR="/home/root/vmx-docker-manager/incoming"
 
-#The default location of models on a native Mac install (used for import)
-MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+print_header() {
+   M="`basename "$0"`"
+   echo "VMX Model Manager by vision.ai (version ""`git describe --tags --dirty 2>/dev/null || md5 -q "$M" 2> /dev/null || md5sum "$M" | awk '{print($1)}'`"")"
+}
 
-# If non-empty, then LOCAL_URL is a Mac
-if [ `uname` = "Linux" ]; then
-    IS_MAC=""
-else
-    IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
-fi
+usage () {
+  print_header
+
+  echo "==============================================="
+  echo ""
+  echo "LOCAL_URL="$LOCAL_URL
+  echo "DOWNLOAD_DIRECTORY=$DOWNLOAD_DIRECTORY"
+  echo "REMOTE_URL="$REMOTE_URL
+  echo "UPLOAD_SSH="$UPLOAD_SSH
+  echo "UPLOAD_URL="$UPLOAD_URL
+  echo "UPLOAD_DIR="$UPLOAD_DIR
+  echo ""
+  echo "Usage: models.sh COMMAND [OPTIONS]"
+  echo 
+  echo "Commands:"
+  echo "    download [a] [b] [c]: Download models from remote server REMOTE_URL into incoming folder"
+  echo "    import:               Import models from incoming folder into VMX model directory"
+  echo "    upload model_name:    Upload models to a remote location via SSH"
+  echo " "
+  echo "Examples:"
+  echo " - Download all publicly available models from REMOTE_URL"
+  echo "    $  ./models download -all"
+  echo " "
+  echo " - Download face, dog, eyes from REMOTE_URL"
+  echo "    $  ./models download face dog eyes"
+  echo " "
+  echo " - Import downloaded models into local VMX"
+  echo "    $  ./models import"
+  echo " "
+  echo " - Upload a model called gesture-pack-12"
+  echo "    $  ./models upload gesture-pack-12"
+  echo " "
+  echo " - Upload two models gesture-pack-12 and gesture-pack-14"
+  echo "    $  ./models upload gesture-pack-12 gesture-pack-14"
+  echo " "
+  echo " - Upload all models"
+  echo "    $  ./models upload -all"
+  echo " "
+  if [ -e ".git" ]; then
+    echo " - Update the vmx-docker-manager"
+    echo "    $  git pull"
+    echo " "
+  fi
+  echo " - Update the vmx-model-manager"
+  echo "    $  wget https://raw.githubusercontent.com/VISIONAI/vmx-docker-manager/master/models"
+  exit 1
+}
+
 
 
 check_dependencies() {
@@ -102,7 +109,7 @@ check_remote_url() {
     if [ "`curl -s ${REMOTE_URL}/model | jq -r '.data' 2> /dev/null`" = "" ]; then
         echo "Problem listing remote models at REMOTE_URL=${REMOTE_URL}"
         echo "Please change REMOTE_URL"
-        exit
+        exit 1
     fi
 }
 
@@ -111,7 +118,7 @@ check_local_url() {
     if [ "`curl -s ${LOCAL_URL}/model | jq -r '.data' 2> /dev/null`" = "" ]; then
         echo "Problem listing local models at LOCAL_URL=${LOCAL_URL}"
         echo "Please change LOCAL_URL"
-        exit
+        exit 1
     fi
 }
 
@@ -144,12 +151,12 @@ download() {
     check_remote_url
     check_local_url
     
-    mkdir -p $DOWNLOAD_DIRECTORY
+    mkdir -p "$DOWNLOAD_DIRECTORY"
 
     LOCAL_UUIDS=`curl -s ${LOCAL_URL}/model | jq -r '.data[] .uuid'`
 
     if [ "$MODEL_NAME" = "-all" ]; then
-        echo "This script will download all models from" $REMOTE_URL "which do not exist in" $LOCAL_URL "into" $DOWNLOAD_DIRECTORY
+        echo "This script will download all models from" $REMOTE_URL "which do not exist in" $LOCAL_URL "into $DOWNLOAD_DIRECTORY"
         REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] .uuid'`
     else
         REMOTE_UUIDS=`curl -s ${REMOTE_URL}/model | jq -r '.data[] | select(.name=="'$MODEL_NAME'") .uuid'`
@@ -162,7 +169,7 @@ download() {
 
     if [ -z "$REMOTE_UUIDS" ]; then
         echo "----------"
-        echo "No remote uuids matching" $MODEL_NAME
+        echo "No remote models on $REMOTE_URL matching" $MODEL_NAME
         return
     fi
 
@@ -170,9 +177,9 @@ download() {
         FINAL_TARBALL=$DOWNLOAD_DIRECTORY/${UUID}.tar.gz
         echo "----------"
         if [ -e $FINAL_TARBALL ]; then
-            echo $FINAL_TARBALL "already exists, skipping download"
+            echo $MODEL_NAME ${UUID}.tar.gz "already exists, skipping download"
         elif [ ! -n "`echo $LOCAL_UUIDS | grep $UUID`" ]; then
-            echo $UUID "not found in" $LOCAL_URL "so downloading"
+            echo $MODEL_NAME $UUID "not found in" $LOCAL_URL "so downloading"
             mkdir $DOWNLOAD_DIRECTORY/$UUID/ 2> /dev/null
             cd $DOWNLOAD_DIRECTORY/$UUID
 
@@ -192,7 +199,7 @@ download() {
             rm -rf $UUID
             cd - > /dev/null 2>&1
         else
-            echo $UUID "already exists inside" $LOCAL_URL
+            echo $MODEL_NAME $UUID "already exists inside" $LOCAL_URL
         fi    
     done    
 }
@@ -200,18 +207,35 @@ download() {
 #Imports the tarballs into the local model store, works with native
 #Mac OS X version and with the Dockerized version
 import() {
-    NFILES=`ls $DOWNLOAD_DIRECTORY/*.gz 2>/dev/null | wc -l`
-    echo "Number of models in" $DOWNLOAD_DIRECTORY "is" $NFILES
+    NFILES=(`ls $DOWNLOAD_DIRECTORY/*.gz 2>/dev/null | wc -l`)
+    echo "Number of tarballs in" $DOWNLOAD_DIRECTORY "is" $NFILES
     if [ "$NFILES" = "0" ]; then
         echo "No models to import, exiting"
         exit
-    else
-        echo "Importing $NFILES models"
+    #else
+        #echo "Importing $NFILES models"
     fi
     
     cd $DOWNLOAD_DIRECTORY
     FILES=`find . -name "*.tar.gz"`
     cd - > /dev/null 2>&1
+
+    # If non-empty, then LOCAL_URL is a Mac
+    if [ `uname` = "Linux" ]; then
+        IS_MAC=""
+    else
+        IS_MAC=`curl -s localhost:3000/check | jq -r ".version[0]" | grep Mac`
+    fi
+
+
+    if [ "$IS_MAC" ]; then    
+        #The default location of models on a native Mac install (used for import)
+        #MAC_MODELS="/Applications/VMX.app/Contents/MacOS/assets/models/"
+
+        MAC_MODELS=`cat config/settings.yml | grep "wwwdir:" | head -1 | awk '{print($2)}' | sed 's/"//g'`/models
+        echo "MAC_MODELS directory is" $MAC_MODELS
+    fi
+    
     for f in $FILES; do
         echo "Importing: " $f
         if [ "$IS_MAC" ]; then
@@ -246,7 +270,7 @@ upload() {
     fi
 
     if [ ! -n "$UUID" ]; then
-        echo "Error: Cannot find model" $MODEL_NAME "in local models" $LOCAL_URL
+        echo "Error: Cannot find model $MODEL_NAME in local models $LOCAL_URL"
         echo "Not copying"
 	return
     fi
@@ -300,7 +324,10 @@ upload() {
   usage
 }
 
-#echo "Welcome to the vision.ai model manager"
+
+print_header
+
+
 check_dependencies
 
 cmd=$1
@@ -321,7 +348,12 @@ case "$cmd" in
             fi
             shift
         done
-        echo "Done downloading, to import run: ./models import"
+        NUM_TARBALLS=(`ls $DOWNLOAD_DIRECTORY | wc -l`)
+        if [ $NUM_TARBALLS -gt 0 ]; then
+            echo "Found ${NUM_TARBALLS} tarballs, to import run: ./models import"
+        #else
+            #echo "Nothing to import inside $DOWNLOAD_DIRECTORY"
+        fi
         exit 0
         ;;
 
