@@ -146,3 +146,27 @@ git clone https://github.com/VISIONAI/nginx-ssl-proxy
 cd nginx-ssl-proxy
 ./proxy.sh
 ```
+
+## Extra (v2): Accessing the ports of the underlying VMXworkers
+
+As of VMX v2, the VMXworker API is the same and the main VMX REST API,
+the endpoints are just different.  When using VMX REST API, your
+endpoints will look like `localhost:3000/sessions/myid/create` but if
+you have the correct port (`8099` in this example) you can access the
+endpoint as `localhost:8099/create`.
+
+To get the IP of the vmx-environment container, run:
+```
+cd ~/vmx-docker-manager/
+docker inspect --format='{{.NetworkSettings.IPAddress}}' vmx-environment
+```
+
+To get all PORTS, run
+```
+docker run --name vmx-tmp --rm --volumes-from vmx-userdata:ro ubuntu bash -c "cat /vmx/sessions/*/url"
+```
+
+To get the PORT of a session called "tomsession"
+```
+docker run --name vmx-tmp --rm --volumes-from vmx-userdata:ro ubuntu bash -c "cat /vmx/sessions/tomsession/url"
+```
